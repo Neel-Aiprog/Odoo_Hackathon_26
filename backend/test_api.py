@@ -63,6 +63,9 @@ class TestAssetFlowAPI(unittest.TestCase):
         self.category_id = self.test_category.id
         db.close()
 
+    def tearDown(self):
+        engine.dispose()
+
     # =====================================================================
     # SCREEN 3 TESTS: ORG SETUP
     # =====================================================================
@@ -364,6 +367,132 @@ class TestAssetFlowAPI(unittest.TestCase):
         response = self.client.get("/api/analytics/kpi")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["assets_available"], 1)
+
+    # =====================================================================
+    # ADDITIONAL COVERAGE: TRANSFERS, TIMELINES, & FEEDBACK
+    # =====================================================================
+
+    def test_asset_transfer_lifecycle(self):
+        # 1. Create asset and allocate it initially
+        db = SessionLocal()
+        asset = Asset(
+            name="Projector Pro", category_id=self.category_id, asset_tag="AF-0001",
+            acquisition_date=date.today(), acquisition_cost=1500.0, condition="good",
+            location="Conference A", status="available"
+        )
+        db.add(asset)
+        db.commit()
+        asset_id = asset.id
+        
+        # Checkout to manager_id
+        alloc = AssetAllocation(
+            asset_id=asset_id, allocated_to_type="employee", allocated_employee_id=self.manager_id,
+            allocated_by_id=self.manager_id, status="active"
+        )
+        db.add(alloc)
+        db.commit()
+        db.close()
+
+        # 2. Create transfer request to emp_id
+        transfer_payload = {
+            "asset_id": asset_id,
+            "requestor_employee_id": self.emp_id,
+            "target_employee_id": self.emp_id,
+            "comments": "Need this for training."
+        }
+        response = self.client.post("/api/transfers", json=transfer_payload)
+        self.assertEqual(response.status_code, 200)
+        transfer_id = response.json()["id"]
+        self.assertEqual(response.json()["current_holder_employee_id"], self.manager_id)
+
+        # 3. Approve transfer request
+        approve_resp = self.client.put(f"/api/transfers/{transfer_id}/approve?action_by={self.manager_id}")
+        self.assertEqual(approve_resp.status_code, 200)
+        self.assertEqual(approve_resp.json()["status"], "approved")
+
+        # 4. Verify old allocation closed, and new allocation is active for emp_id
+        db = SessionLocal()
+        allocations = db.query(AssetAllocation).filter_by(asset_id=asset_id).all()
+        self.assertEqual(len(allocations), 2)
+        
+        # Find which is active
+        active_alloc = [a for a in allocations if a.status == "active"][0]
+        transferred_alloc = [a for a in allocations if a.status == "transferred"][0]
+        
+        self.assertEqual(active_alloc.allocated_employee_id, self.emp_id)
+        self.assertEqual(transferred_alloc.allocated_employee_id, self.manager_id)
+        db.close()
+
+    def test_asset_timeline_history(self):
+        # Create asset and register maintenance requests & allocations to test detailed view
+        db = SessionLocal()
+        asset = Asset(
+            name="Testing Mobile", category_id=self.category_id, asset_tag="AF-0001",
+            acquisition_date=date.today(), acquisition_cost=500.0, condition="fair",
+            location="Lab", status="available"
+        )
+        db.add(asset)
+        db.commit()
+        asset_id = asset.id
+        db.close()
+
+        # Add allocation
+        self.client.post("/api/allocations", json={
+            "asset_id": asset_id, "allocated_to_type": "employee",
+            "allocated_employee_id": self.emp_id, "allocated_by_id": self.manager_id
+        })
+
+        # Add maintenance request
+        self.client.post("/api/maintenance", json={
+            "asset_id": asset_id, "raised_by_employee_id": self.emp_id,
+            "description": "Screen cracked", "priority": "high"
+        })
+
+        # Fetch detailed asset endpoint
+        response = self.client.get(f"/api/assets/{asset_id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data["allocation_history"]), 1)
+        self.assertEqual(len(data["maintenance_history"]), 1)
+        self.assertEqual(data["allocation_history"][0]["target"], "Bob Builder")
+        self.assertEqual(data["maintenance_history"][0]["description"], "Screen cracked")
+
+    def test_notifications_and_logs(self):
+        # 1. Trigger notification (e.g. by allocating an asset)
+        db = SessionLocal()
+        asset = Asset(
+            name="Testing Laptop", category_id=self.category_id, asset_tag="AF-0001",
+            acquisition_date=date.today(), acquisition_cost=1000.0, condition="good",
+            location="Lab", status="available"
+        )
+        db.add(asset)
+        db.commit()
+        asset_id = asset.id
+        db.close()
+
+        self.client.post("/api/allocations", json={
+            "asset_id": asset_id, "allocated_to_type": "employee",
+            "allocated_employee_id": self.emp_id, "allocated_by_id": self.manager_id
+        })
+
+        # 2. Query notifications for emp_id
+        notif_resp = self.client.get(f"/api/notifications?employee_id={self.emp_id}")
+        self.assertEqual(notif_resp.status_code, 200)
+        self.assertGreater(len(notif_resp.json()), 0)
+        notif_id = notif_resp.json()[0]["id"]
+
+        # 3. Mark notification read
+        read_resp = self.client.put(f"/api/notifications/{notif_id}/read")
+        self.assertEqual(read_resp.status_code, 200)
+        self.assertTrue(read_resp.json()["is_read"])
+
+        # 4. Fetch activity logs
+        logs_resp = self.client.get("/api/activity-logs")
+        self.assertEqual(logs_resp.status_code, 200)
+        self.assertGreater(len(logs_resp.json()), 0)
+        # Verify logger captures allocation action
+        actions = [log["action"] for log in logs_resp.json()]
+        self.assertIn("ALLOCATE_ASSET", actions)
 
 if __name__ == '__main__':
     unittest.main()

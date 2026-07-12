@@ -296,7 +296,7 @@ class NotificationResponse(BaseModel):
     title: str
     message: str
     is_read: bool
-    created_at: str
+    created_at: datetime
 
     class Config:
         from_attributes = True

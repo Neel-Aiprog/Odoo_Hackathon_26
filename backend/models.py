@@ -270,21 +270,29 @@ def enforce_business_rules(session, flush_context, instances):
                     AssetAllocation.asset_id == obj.asset_id,
                     AssetAllocation.status == "active",
                     AssetAllocation.id != obj.id
-                ).first()
-                if existing:
+                ).all()
+                
+                active_existing = []
+                for ext in existing:
+                    if ext in session.dirty and ext.status != "active":
+                        continue
+                    active_existing.append(ext)
+
+                if active_existing:
+                    first_existing = active_existing[0]
                     # Get employee details to show descriptive error as required by prompt
                     employee_name = "Unknown"
-                    if existing.allocated_employee_id:
-                        emp = session.get(Employee, existing.allocated_employee_id)
+                    if first_existing.allocated_employee_id:
+                        emp = session.get(Employee, first_existing.allocated_employee_id)
                         if emp:
                             employee_name = emp.name
                     dept_name = "Unknown"
-                    if existing.allocated_department_id:
-                        dept = session.get(Department, existing.allocated_department_id)
+                    if first_existing.allocated_department_id:
+                        dept = session.get(Department, first_existing.allocated_department_id)
                         if dept:
                             dept_name = dept.name
                     
-                    holder = employee_name if existing.allocated_to_type == "employee" else f"Department {dept_name}"
+                    holder = employee_name if first_existing.allocated_to_type == "employee" else f"Department {dept_name}"
                     raise ValueError(
                         f"Conflict: Asset {obj.asset_id} is already allocated. Currently held by {holder}."
                     )
