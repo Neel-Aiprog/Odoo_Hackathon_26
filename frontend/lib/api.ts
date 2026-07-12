@@ -304,3 +304,102 @@ export async function createTransferRequest(payload: TransferCreatePayload) {
   });
 }
 
+// ─── Dashboard / Analytics ───────────────────────────────────────────────────
+
+export type DashboardKPIs = {
+  assets_available: number;
+  assets_allocated: number;
+  maintenance_today: number;
+  active_bookings: number;
+  pending_transfers: number;
+  upcoming_returns: number;
+};
+
+export type ActivityLog = {
+  id: number;
+  employee_id: number | null;
+  employee_name: string;
+  action: string;
+  details: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export async function getDashboardKPIs() {
+  return apiFetch<DashboardKPIs>("/api/analytics/kpi");
+}
+
+export async function getActivityLogs() {
+  return apiFetch<ActivityLog[]>("/api/activity-logs");
+}
+
+// ─── Audit Cycles ─────────────────────────────────────────────────────────────
+
+export type AuditCycle = {
+  id: number;
+  name: string;
+  scope_type: string;
+  scope_department_id: number | null;
+  scope_department_name: string | null;
+  scope_location: string | null;
+  start_date: string;
+  end_date: string;
+  status: string;
+  auditors: Array<{ id: number; name: string }>;
+  created_at: string;
+};
+
+export type AuditItem = {
+  id: number;
+  audit_cycle_id: number;
+  asset_id: number;
+  asset_tag: string;
+  asset_name: string;
+  verification_status: string;
+  notes: string | null;
+  verified_by_employee_id: number | null;
+  verified_by_name: string | null;
+  verified_at: string | null;
+};
+
+export type AuditCycleCreatePayload = {
+  name: string;
+  scope_type: "department" | "location" | "all";
+  scope_department_id?: number;
+  scope_location?: string;
+  start_date: string;
+  end_date: string;
+  auditor_ids: number[];
+};
+
+export async function getAuditCycles() {
+  return apiFetch<AuditCycle[]>("/api/audits/cycles");
+}
+
+export async function createAuditCycle(payload: AuditCycleCreatePayload) {
+  return apiFetch<AuditCycle>("/api/audits/cycles", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getAuditCycleItems(cycleId: number) {
+  return apiFetch<AuditItem[]>(`/api/audits/cycles/${cycleId}/items`);
+}
+
+export async function updateAuditItem(
+  itemId: number,
+  verification_status: "verified" | "missing" | "damaged",
+  notes?: string
+) {
+  return apiFetch<AuditItem>(`/api/audits/items/${itemId}`, {
+    method: "PUT",
+    body: JSON.stringify({ verification_status, notes }),
+  });
+}
+
+export async function closeAuditCycle(cycleId: number) {
+  return apiFetch<AuditCycle>(`/api/audits/cycles/${cycleId}/close`, {
+    method: "PUT",
+    body: JSON.stringify({}),
+  });
+}

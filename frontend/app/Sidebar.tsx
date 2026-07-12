@@ -12,13 +12,13 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
   }, []);
 
   const items = [
-    { name: "Dashboard", href: "#" },
+    { name: "Dashboard", href: "/dashboard" },
     { name: "Organization setup", href: "/organization" },
     { name: "Assets", href: "/" },
     { name: "Allocation & Transfer", href: "/allocations" },
     { name: "Resource Booking", href: "#" },
     { name: "Maintenance", href: "#" },
-    { name: "Audit", href: "#" },
+    { name: "Audit", href: "/audit" },
     { name: "Reports", href: "#" },
     { name: "Notifications", href: "#" },
   ];
