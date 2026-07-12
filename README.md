@@ -4,6 +4,12 @@ AssetFlow is a modern, full-screen web application designed to track company ass
 
 ---
 
+## 🌐 Live Demo
+
+**Deployed App:** [https://odoo-hackathon-26.vercel.app/](https://odoo-hackathon-26.vercel.app/)
+
+---
+
 ## 🚀 Key Features
 
 * **Real-time Dashboard:** Displays live KPI cards (Assets Available, Allocated, Maintenance Today, Bookings, Pending Transfers, and Overdue Returns) alongside an interactive list of overdue return logs.

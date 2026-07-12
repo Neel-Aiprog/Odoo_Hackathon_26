@@ -113,7 +113,6 @@ export default function AssetsPage() {
     }
   }, [query, categoryFilter, statusFilter, locationFilter]);
 
-  const canRegister = user?.role === "admin" || user?.role === "asset_manager";
 
   useEffect(() => {
     if (!user) return;
@@ -396,7 +395,8 @@ export default function AssetsPage() {
               </p>
             ) : (
               <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-                <Field label="Name" error={errors.name}>
+                <div>
+                  <Label htmlFor="name">Asset Name</Label>
                   <Input
                     id="name"
                     value={form.name}
