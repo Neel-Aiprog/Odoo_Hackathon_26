@@ -262,58 +262,62 @@ def enforce_business_rules(session, flush_context, instances):
     for obj in session.new.union(session.dirty):
         
         # 1. Enforce Asset Double-Allocation Prevention
-        if isinstance(obj, AssetAllocation) and obj.status == "active":
-            # Check if another active allocation exists for this asset
-            existing = session.query(AssetAllocation).filter(
-                AssetAllocation.asset_id == obj.asset_id,
-                AssetAllocation.status == "active",
-                AssetAllocation.id != obj.id
-            ).first()
-            if existing:
-                # Get employee details to show descriptive error as required by prompt
-                employee_name = "Unknown"
-                if existing.allocated_employee_id:
-                    emp = session.get(Employee, existing.allocated_employee_id)
-                    if emp:
-                        employee_name = emp.name
-                dept_name = "Unknown"
-                if existing.allocated_department_id:
-                    dept = session.get(Department, existing.allocated_department_id)
-                    if dept:
-                        dept_name = dept.name
-                
-                holder = employee_name if existing.allocated_to_type == "employee" else f"Department {dept_name}"
-                raise ValueError(
-                    f"Conflict: Asset {obj.asset_id} is already allocated. Currently held by {holder}."
-                )
+        if isinstance(obj, AssetAllocation):
+            alloc_status = obj.status if obj.status is not None else "active"
+            if alloc_status == "active":
+                # Check if another active allocation exists for this asset
+                existing = session.query(AssetAllocation).filter(
+                    AssetAllocation.asset_id == obj.asset_id,
+                    AssetAllocation.status == "active",
+                    AssetAllocation.id != obj.id
+                ).first()
+                if existing:
+                    # Get employee details to show descriptive error as required by prompt
+                    employee_name = "Unknown"
+                    if existing.allocated_employee_id:
+                        emp = session.get(Employee, existing.allocated_employee_id)
+                        if emp:
+                            employee_name = emp.name
+                    dept_name = "Unknown"
+                    if existing.allocated_department_id:
+                        dept = session.get(Department, existing.allocated_department_id)
+                        if dept:
+                            dept_name = dept.name
+                    
+                    holder = employee_name if existing.allocated_to_type == "employee" else f"Department {dept_name}"
+                    raise ValueError(
+                        f"Conflict: Asset {obj.asset_id} is already allocated. Currently held by {holder}."
+                    )
 
-            # Auto-update asset status to 'allocated' when allocation becomes active
-            asset = session.get(Asset, obj.asset_id)
-            if asset and asset.status != "allocated":
-                asset.status = "allocated"
+                # Auto-update asset status to 'allocated' when allocation becomes active
+                asset = session.get(Asset, obj.asset_id)
+                if asset and asset.status != "allocated":
+                    asset.status = "allocated"
 
-        elif isinstance(obj, AssetAllocation) and obj.status == "returned":
-            # Auto-update asset status to 'available' when allocation is returned
-            asset = session.get(Asset, obj.asset_id)
-            if asset and asset.status == "allocated":
-                asset.status = "available"
+            elif alloc_status == "returned":
+                # Auto-update asset status to 'available' when allocation is returned
+                asset = session.get(Asset, obj.asset_id)
+                if asset and asset.status == "allocated":
+                    asset.status = "available"
 
         # 2. Enforce Resource Booking Overlap Validation
-        elif isinstance(obj, ResourceBooking) and obj.status in ["upcoming", "ongoing"]:
-            # Query for overlap. Two intervals overlap if: StartA < EndB AND EndA > StartB
-            overlapping = session.query(ResourceBooking).filter(
-                ResourceBooking.resource_id == obj.resource_id,
-                ResourceBooking.status.in_(["upcoming", "ongoing"]),
-                ResourceBooking.start_time < obj.end_time,
-                ResourceBooking.end_time > obj.start_time,
-                ResourceBooking.id != obj.id
-            ).first()
-            if overlapping:
-                raise ValueError(
-                    f"Conflict: Resource {obj.resource_id} is already booked from "
-                    f"{overlapping.start_time.strftime('%H:%M')} to {overlapping.end_time.strftime('%H:%M')} "
-                    f"for this time slot."
-                )
+        elif isinstance(obj, ResourceBooking):
+            booking_status = obj.status if obj.status is not None else "upcoming"
+            if booking_status in ["upcoming", "ongoing"]:
+                # Query for overlap. Two intervals overlap if: StartA < EndB AND EndA > StartB
+                overlapping = session.query(ResourceBooking).filter(
+                    ResourceBooking.resource_id == obj.resource_id,
+                    ResourceBooking.status.in_(["upcoming", "ongoing"]),
+                    ResourceBooking.start_time < obj.end_time,
+                    ResourceBooking.end_time > obj.start_time,
+                    ResourceBooking.id != obj.id
+                ).first()
+                if overlapping:
+                    raise ValueError(
+                        f"Conflict: Resource {obj.resource_id} is already booked from "
+                        f"{overlapping.start_time.strftime('%H:%M')} to {overlapping.end_time.strftime('%H:%M')} "
+                        f"for this time slot."
+                    )
 
         # 3. Enforce Maintenance Status Transitions
         elif isinstance(obj, MaintenanceRequest):
