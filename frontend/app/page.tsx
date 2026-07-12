@@ -25,7 +25,7 @@ function inputClassName(extra = "") {
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [loginEmail, setLoginEmail] = useState("mark@assetflow.com");
+  const [loginEmail, setLoginEmail] = useState("raj@assetflow.com");
   const [loginPassword, setLoginPassword] = useState("password123");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginSubmitting, setLoginSubmitting] = useState(false);
@@ -94,7 +94,8 @@ export default function Home() {
           <h1 className="mt-2 text-3xl font-semibold text-stone-50">Sign in to continue</h1>
           <p className="mt-2 text-sm text-stone-400">
             Asset registry requires authentication. Use a seeded account such as{" "}
-            <span className="text-stone-200">mark@assetflow.com</span> /{" "}
+            <span className="text-stone-200">Employee: raj@assetflow.com</span> /{" "}
+            <span className="text-stone-200">Admin: alice@assetflow.com</span> /{" "}
             <span className="text-stone-200">password123</span>.
           </p>
 

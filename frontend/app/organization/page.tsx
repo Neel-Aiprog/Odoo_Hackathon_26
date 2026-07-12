@@ -29,6 +29,7 @@ export default function OrganizationPage() {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<"departments" | "categories" | "employees">("departments");
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -46,7 +47,10 @@ export default function OrganizationPage() {
   const [catSubmitting, setCatSubmitting] = useState(false);
 
   useEffect(() => {
-    getMe().then(setUser).catch(() => setUser(null));
+    getMe()
+      .then(setUser)
+      .catch(() => setUser(null))
+      .finally(() => setAuthLoading(false));
   }, []);
 
   const loadData = useCallback(async () => {
@@ -115,7 +119,40 @@ export default function OrganizationPage() {
     }
   }
 
-  if (!user) return null;
+  if (authLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#111412] text-stone-300">
+        Loading...
+      </main>
+    );
+  }
+
+  if (!user) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/";
+    }
+    return null;
+  }
+
+  if (user.role !== "admin") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(48,82,62,0.35),_transparent_34%),linear-gradient(180deg,_#0f1110_0%,_#111412_100%)] px-4 py-6 text-stone-100">
+        <div className="text-center p-8 rounded-[2rem] border border-stone-200/15 bg-[#141714] max-w-md shadow-[0_28px_90px_rgba(0,0,0,0.45)]">
+          <span className="text-4xl">⚠️</span>
+          <h1 className="text-2xl font-bold mt-4 text-stone-50">Access Denied</h1>
+          <p className="text-sm text-stone-400 mt-2">
+            You do not have permission to view the Organization page. Admin authorization is required.
+          </p>
+          <button
+            onClick={() => window.location.href = "/"}
+            className="mt-6 h-10 px-6 rounded-2xl bg-emerald-300 text-sm font-semibold text-emerald-950 hover:bg-emerald-200 transition"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(48,82,62,0.35),_transparent_34%),linear-gradient(180deg,_#0f1110_0%,_#111412_100%)] px-4 py-6 text-stone-100 sm:px-6 lg:px-8">

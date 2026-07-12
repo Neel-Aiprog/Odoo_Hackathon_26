@@ -13,7 +13,7 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
 
   const items = [
     { name: "Dashboard", href: "/" },
-    { name: "Organization setup", href: "/organization" },
+    ...(user?.role === "admin" ? [{ name: "Organization setup", href: "/organization" }] : []),
     { name: "Assets", href: "/assets" },
     { name: "Allocation & Transfer", href: "/allocations" },
     { name: "Resource Booking", href: "#" },
