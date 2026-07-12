@@ -234,12 +234,22 @@ export default function MaintenancePage() {
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-              />
+              <div className="space-y-1">
+                <Input
+                  id="password"
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                />
+                <div className="flex justify-end">
+                  <a
+                    href="/?view=forgot"
+                    className="text-xs font-semibold text-emerald-400 hover:text-emerald-350 transition outline-none mt-1"
+                  >
+                    Forgot password?
+                  </a>
+                </div>
+              </div>
             </div>
             {loginError ? (
               <p className="text-sm text-warning">{loginError}</p>

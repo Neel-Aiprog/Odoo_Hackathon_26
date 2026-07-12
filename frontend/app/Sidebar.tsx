@@ -174,13 +174,6 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
             >
               Change password
             </button>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="mt-2 flex h-9 w-full items-center justify-center rounded-xl border border-rose-400/30 bg-rose-400/5 text-xs font-medium text-rose-300 hover:bg-rose-400/10 transition"
-            >
-              Sign out
-            </button>
           </div>
           <button
             type="button"
