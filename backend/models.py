@@ -30,6 +30,8 @@ class Employee(Base):
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
     role = Column(String, default="employee")  # employee, department_head, asset_manager, admin
     status = Column(String, default="active")  # active, inactive
+    reset_token = Column(String, nullable=True)
+    reset_token_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -33,6 +33,8 @@ def login(data: LoginRequest, response: Response, db: Session = Depends(get_db))
     user = db.query(Employee).filter(Employee.email == data.email).first()
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    if user.status != "active":
+        raise HTTPException(status_code=403, detail="User account is deactivated")
 
     token = create_access_token({"user_id": user.id, "role": user.role})
     response.set_cookie("token", token, httponly=True, samesite="lax")
@@ -43,17 +45,27 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(Employee).filter(Employee.email == data.email).first()
     if user:
         reset_token = secrets.token_hex(32)
-        # store reset_token + expiry on the user record if you add those columns,
-        # or keep an in-memory dict for hackathon speed
+        user.reset_token = reset_token
+        user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+        db.commit()
+        # We print it to console because email SMTP setup is not configured in this local/development setup
         print(f"Password reset link: /reset-password?token={reset_token}")
     return {"message": "If that email exists, a reset link was sent"}
 
 @router.post("/reset-password")
 def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
-    # look up user by stored reset token, check expiry, then:
-    # user.password_hash = hash_password(data.new_password)
-    # db.commit()
-    return {"message": "Password updated"}
+    user = db.query(Employee).filter(
+        Employee.reset_token == data.token,
+        Employee.reset_token_expires > datetime.utcnow()
+    ).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    user.password_hash = hash_password(data.new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+    return {"message": "Password updated successfully"}
 
 @router.get("/me", response_model=EmployeeOut)
 def me(current_user: Employee = Depends(get_current_user)):

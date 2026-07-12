@@ -26,6 +26,8 @@ CREATE TABLE employees (
     department_id INTEGER NULL,
     role VARCHAR(50) DEFAULT 'employee', -- 'employee', 'department_head', 'asset_manager', 'admin'
     status VARCHAR(50) DEFAULT 'active', -- 'active', 'inactive'
+    reset_token VARCHAR(255) NULL,
+    reset_token_expires TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL

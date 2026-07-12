@@ -16,6 +16,8 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> Employe
     user = db.query(Employee).filter(Employee.id == payload["user_id"]).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+    if user.status != "active":
+        raise HTTPException(status_code=401, detail="User account is deactivated")
     return user
 
 def require_role(*allowed_roles: str):
