@@ -1,9 +1,17 @@
 from typing import List, Optional
 from datetime import datetime, date
+import io
+import csv
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session
+
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 
 from database import get_db
 from models import (
@@ -222,3 +230,206 @@ def close_audit_cycle(
         "scope_location": cycle.scope_location, "start_date": cycle.start_date, "end_date": cycle.end_date,
         "status": cycle.status, "auditors": auditors_list, "created_at": cycle.created_at.isoformat()
     }
+
+
+@router.get("/audits/cycles/{cycle_id}/export/csv")
+def export_audit_csv(
+    cycle_id: int,
+    db: Session = Depends(get_db),
+    manager: Employee = Depends(require_role("admin", "asset_manager")),
+):
+    cycle = db.get(AuditCycle, cycle_id)
+    if not cycle:
+        raise HTTPException(status_code=404, detail="Audit cycle not found.")
+        
+    items = db.query(AuditItem).filter_by(audit_cycle_id=cycle_id).all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(["Audit Cycle", cycle.name])
+    writer.writerow(["Status", cycle.status])
+    writer.writerow(["Start Date", cycle.start_date])
+    writer.writerow(["End Date", cycle.end_date])
+    writer.writerow([])
+    writer.writerow(["Item ID", "Asset Tag", "Asset Name", "Verification Status", "Notes", "Verified By", "Verified At"])
+    
+    for it in items:
+        asset = db.get(Asset, it.asset_id)
+        emp = db.get(Employee, it.verified_by_employee_id)
+        writer.writerow([
+            it.id,
+            asset.asset_tag if asset else "Unknown",
+            asset.name if asset else "Unknown",
+            it.verification_status,
+            it.notes or "",
+            emp.name if emp else "",
+            it.verified_at.isoformat() if it.verified_at else ""
+        ])
+        
+    output.seek(0)
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode("utf-8")),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=audit_cycle_{cycle_id}_report.csv"}
+    )
+
+
+@router.get("/audits/cycles/{cycle_id}/export/pdf")
+def export_audit_pdf(
+    cycle_id: int,
+    db: Session = Depends(get_db),
+    manager: Employee = Depends(require_role("admin", "asset_manager")),
+):
+    cycle = db.get(AuditCycle, cycle_id)
+    if not cycle:
+        raise HTTPException(status_code=404, detail="Audit cycle not found.")
+        
+    items = db.query(AuditItem).filter_by(audit_cycle_id=cycle_id).all()
+    
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    # Custom colors
+    primary_color = colors.HexColor("#0f172a") # dark slate
+    secondary_color = colors.HexColor("#10b981") # emerald
+    text_color = colors.HexColor("#334155")
+    
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Heading1'],
+        fontSize=22,
+        leading=26,
+        textColor=primary_color,
+        spaceAfter=15
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'DocSubtitle',
+        parent=styles['Normal'],
+        fontSize=10,
+        leading=14,
+        textColor=text_color,
+        spaceAfter=20
+    )
+    
+    header_style = ParagraphStyle(
+        'TableHeader',
+        parent=styles['Normal'],
+        fontSize=10,
+        leading=12,
+        fontName="Helvetica-Bold",
+        textColor=colors.white
+    )
+    
+    cell_style = ParagraphStyle(
+        'TableCell',
+        parent=styles['Normal'],
+        fontSize=9,
+        leading=12,
+        textColor=text_color
+    )
+
+    status_verified = ParagraphStyle('Verified', parent=cell_style, fontName="Helvetica-Bold", textColor=colors.HexColor("#047857"))
+    status_missing = ParagraphStyle('Missing', parent=cell_style, fontName="Helvetica-Bold", textColor=colors.HexColor("#b91c1c"))
+    status_damaged = ParagraphStyle('Damaged', parent=cell_style, fontName="Helvetica-Bold", textColor=colors.HexColor("#b45309"))
+    status_pending = ParagraphStyle('Pending', parent=cell_style, fontName="Helvetica", textColor=colors.HexColor("#6b7280"))
+    
+    elements = []
+    
+    # Title
+    elements.append(Paragraph("AssetFlow - Audit Verification Report", title_style))
+    elements.append(Paragraph(f"Cycle Name: {cycle.name} | Status: {cycle.status.upper()} | Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}", subtitle_style))
+    elements.append(Spacer(1, 10))
+    
+    # Summary info
+    total = len(items)
+    verified = sum(1 for it in items if it.verification_status == "verified")
+    missing = sum(1 for it in items if it.verification_status == "missing")
+    damaged = sum(1 for it in items if it.verification_status == "damaged")
+    pending = sum(1 for it in items if it.verification_status == "pending")
+    
+    summary_data = [
+        [
+            Paragraph("<b>Total Items:</b>", cell_style), Paragraph(str(total), cell_style),
+            Paragraph("<b>Verified:</b>", cell_style), Paragraph(str(verified), cell_style),
+        ],
+        [
+            Paragraph("<b>Missing:</b>", cell_style), Paragraph(str(missing), cell_style),
+            Paragraph("<b>Damaged:</b>", cell_style), Paragraph(str(damaged), cell_style),
+        ],
+        [
+            Paragraph("<b>Pending:</b>", cell_style), Paragraph(str(pending), cell_style),
+            Paragraph("<b>Scope:</b>", cell_style), Paragraph(f"{cycle.scope_type.capitalize()} ({cycle.scope_location or 'N/A'})", cell_style)
+        ]
+    ]
+    summary_table = Table(summary_data, colWidths=[100, 150, 100, 150])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#f8fafc")),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#f1f5f9")),
+    ]))
+    elements.append(summary_table)
+    elements.append(Spacer(1, 20))
+    
+    # Table headers
+    headers = ["Asset Tag", "Asset Name", "Status", "Verified By", "Notes"]
+    table_data = [[Paragraph(h, header_style) for h in headers]]
+    
+    for it in items:
+        asset = db.get(Asset, it.asset_id)
+        emp = db.get(Employee, it.verified_by_employee_id)
+        
+        status_text = it.verification_status.capitalize()
+        if it.verification_status == "verified":
+            p_status = Paragraph(status_text, status_verified)
+        elif it.verification_status == "missing":
+            p_status = Paragraph(status_text, status_missing)
+        elif it.verification_status == "damaged":
+            p_status = Paragraph(status_text, status_damaged)
+        else:
+            p_status = Paragraph(status_text, status_pending)
+            
+        row = [
+            Paragraph(asset.asset_tag if asset else "N/A", cell_style),
+            Paragraph(asset.name if asset else "N/A", cell_style),
+            p_status,
+            Paragraph(emp.name if emp else "—", cell_style),
+            Paragraph(it.notes or "—", cell_style)
+        ]
+        table_data.append(row)
+        
+    items_table = Table(table_data, colWidths=[80, 140, 80, 100, 130])
+    items_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), primary_color),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#e2e8f0")),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#f8fafc")]),
+    ]))
+    elements.append(items_table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=audit_cycle_{cycle_id}_report.pdf"}
+    )
