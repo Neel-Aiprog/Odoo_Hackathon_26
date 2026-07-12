@@ -157,3 +157,144 @@ export function formatStatus(status: string) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
+
+export type Department = {
+  id: number;
+  name: string;
+  parent_department_id: number | null;
+  parent_department_name: string | null;
+  department_head_id: number | null;
+  department_head_name: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Employee = {
+  id: number;
+  name: string;
+  email: string;
+  department_id: number | null;
+  department_name: string | null;
+  role: string;
+  status: string;
+  created_at: string;
+};
+
+export type CategoryCreatePayload = {
+  name: string;
+  description?: string;
+  schema_attributes?: Record<string, unknown>;
+};
+
+export type DepartmentCreatePayload = {
+  name: string;
+  parent_department_id?: number;
+  department_head_id?: number;
+  status?: string;
+};
+
+export type AllocationCreatePayload = {
+  asset_id: number;
+  allocated_to_type: string;
+  allocated_employee_id?: number;
+  allocated_department_id?: number;
+  expected_return_date?: string;
+};
+
+export type TransferCreatePayload = {
+  asset_id: number;
+  target_employee_id?: number;
+  target_department_id?: number;
+  comments?: string;
+};
+
+export type TransferResponse = {
+  id: number;
+  asset_id: number;
+  asset_tag: string;
+  asset_name: string;
+  requestor_employee_id: number;
+  requestor_name: string;
+  target_employee_id: number | null;
+  target_employee_name: string | null;
+  target_department_id: number | null;
+  target_department_name: string | null;
+  current_holder_employee_id: number | null;
+  current_holder_name: string | null;
+  status: string;
+  comments: string | null;
+  actioned_by_id: number | null;
+  actioned_at: string | null;
+  created_at: string;
+};
+
+export type AllocationResponse = {
+  id: number;
+  asset_id: number;
+  asset_tag: string;
+  asset_name: string;
+  allocated_to_type: string;
+  allocated_employee_id: number | null;
+  allocated_employee_name: string | null;
+  allocated_department_id: number | null;
+  allocated_department_name: string | null;
+  allocated_by_id: number;
+  allocated_by_name: string;
+  allocation_date: string;
+  expected_return_date: string | null;
+  actual_return_date: string | null;
+  condition_check_in_notes: string | null;
+  status: string;
+};
+
+export async function getDepartments() {
+  return apiFetch<Department[]>("/api/departments");
+}
+
+export async function createDepartment(payload: DepartmentCreatePayload) {
+  return apiFetch<Department>("/api/departments", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createCategory(payload: CategoryCreatePayload) {
+  return apiFetch<Category>("/api/categories", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getEmployees() {
+  return apiFetch<Employee[]>("/api/employees");
+}
+
+export async function updateEmployeeRole(id: number, role: string) {
+  return apiFetch<Employee>(`/api/employees/${id}/role`, {
+    method: "PUT",
+    body: JSON.stringify({ role }),
+  });
+}
+
+export async function allocateAsset(payload: AllocationCreatePayload) {
+  return apiFetch<AllocationResponse>("/api/allocations", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function returnAllocation(id: number, notes?: string) {
+  return apiFetch<AllocationResponse>(`/api/allocations/${id}/return`, {
+    method: "PUT",
+    body: JSON.stringify({ condition_check_in_notes: notes || undefined }),
+  });
+}
+
+export async function createTransferRequest(payload: TransferCreatePayload) {
+  return apiFetch<TransferResponse>("/api/transfers", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
