@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
 import { LucideIcon } from "lucide-react";
 
@@ -15,42 +14,23 @@ export function KpiCard({
   icon?: LucideIcon;
   accent?: "warning" | "success" | "primary";
 }) {
-  const accentClasses = {
-    warning: "text-warning",
-    success: "text-success",
-    primary: "text-primary-light",
-  };
-
   return (
-    <Card className="flex flex-col justify-between">
+    <div className="flex flex-col justify-between px-6 py-2 border-r border-black/10 last:border-0 hover:scale-[1.02] transition duration-200">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+        <p className="text-[10px] font-extrabold uppercase tracking-widest text-black/60">
           {label}
         </p>
-        {Icon ? (
-          <Icon
-            className={cn(
-              "h-5 w-5 shrink-0 text-text-muted",
-              accent && accentClasses[accent],
-            )}
-          />
-        ) : null}
       </div>
-      <div className="mt-3">
-        <p
-          className={cn(
-            "text-3xl font-semibold tracking-tight text-text-primary",
-            accent && accentClasses[accent],
-          )}
-        >
+      <div className="mt-2">
+        <p className="text-3xl font-extrabold tracking-tighter text-[#050605]">
           {value}
         </p>
         {description ? (
-          <p className="mt-1 text-xs leading-relaxed text-text-secondary">
+          <p className="mt-0.5 text-[10px] leading-tight text-black/70 font-semibold">
             {description}
           </p>
         ) : null}
       </div>
-    </Card>
+    </div>
   );
 }

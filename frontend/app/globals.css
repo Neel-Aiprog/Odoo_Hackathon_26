@@ -1,28 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  /* Dark app background and dark sidebar */
   --bg-app: #000000;
-  --bg-surface: #0a0a0c;
-  --bg-elevated: #121215;
-  --bg-input: #3d4df2;
+  --bg-surface: #0a0b0a;
+  --bg-elevated: #111211;
+  --bg-input: #121312;
 
-  --primary: #3d4df2;
-  --primary-light: #f46cc3;
-  --primary-dark: #202eb8;
+  --mathical-purple: #4c51e6;
+  --mathical-pink: #ec8fa9;
+  --mathical-sand: #f4ecd8;
+  --mathical-lime: #c5f82a;
+
+  --primary: #4c51e6;
+  --primary-light: #6e73ff;
+  --primary-dark: #373ab0;
   --primary-inverse: #ffffff;
 
-  --warning: #ff4d4d;
-  --warning-light: #ff7373;
-  --success: #d4f03b;
+  --warning: #ec8fa9;
+  --warning-light: #f7aabf;
+  --success: #c5f82a;
 
-  --border: rgba(255, 255, 255, 0.08);
-  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border: #18191a;
+  --border-subtle: #0f100f;
 
-  --text-primary: #f8f9fa;
-  --text-secondary: #a0a2ad;
-  --text-muted: #72747f;
-  --text-placeholder: rgba(255, 255, 255, 0.6);
+  --text-primary: #ffffff;
+  --text-secondary: #f4ecd8;
+  --text-muted: #808388;
+  --text-placeholder: #505256;
 
   --radius-sm: 0.75rem;
   --radius-md: 1.25rem;
@@ -34,6 +38,11 @@
   --color-bg-surface: var(--bg-surface);
   --color-bg-elevated: var(--bg-elevated);
   --color-bg-input: var(--bg-input);
+
+  --color-mathical-purple: var(--mathical-purple);
+  --color-mathical-pink: var(--mathical-pink);
+  --color-mathical-sand: var(--mathical-sand);
+  --color-mathical-lime: var(--mathical-lime);
 
   --color-primary: var(--primary);
   --color-primary-light: var(--primary-light);
@@ -52,8 +61,8 @@
   --color-text-muted: var(--text-muted);
   --color-text-placeholder: var(--text-placeholder);
 
-  --font-sans: var(--font-lato);
-  --font-heading: var(--font-archivo);
+  --font-sans: var(--font-outfit);
+  --font-heading: var(--font-lexend);
   --font-mono: var(--font-geist-mono);
 }
 

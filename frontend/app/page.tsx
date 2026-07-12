@@ -6,14 +6,13 @@ import Link from "next/link";
 import {
   getDashboardKpis,
   getOverdueAllocations,
-  getMe,
-  login,
   forgotPassword,
   resetPassword,
   type User,
   type Kpis,
   type OverdueAllocation,
 } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
 import { PageShell } from "@/components/PageShell";
 import { KpiCard } from "@/components/KpiCard";
 import { Card } from "@/components/ui/Card";
@@ -35,12 +34,7 @@ import {
 } from "lucide-react";
 
 export default function Home() {
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [loginEmail, setLoginEmail] = useState("raj@assetflow.com");
-  const [loginPassword, setLoginPassword] = useState("password123");
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [loginSubmitting, setLoginSubmitting] = useState(false);
+
 
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [overdue, setOverdue] = useState<OverdueAllocation[]>([]);
@@ -143,235 +137,12 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => {
-    getMe()
-      .then(setUser)
-      .catch(() => setUser(null))
-      .finally(() => setAuthLoading(false));
-  }, []);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!user) return;
     void loadDashboardData();
   }, [user, loadDashboardData]);
-
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoginSubmitting(true);
-    setLoginError(null);
-    try {
-      const result = await login(loginEmail, loginPassword);
-      setUser(result.user);
-    } catch (error) {
-      setLoginError(error instanceof Error ? error.message : "Login failed");
-    } finally {
-      setLoginSubmitting(false);
-    }
-  }
-
-  if (authLoading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-bg-app text-text-secondary">
-        Loading AssetFlow…
-      </main>
-    );
-  }
-
-  if (!user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-bg-app px-4 py-6">
-        <Card className="w-full max-w-md">
-          <p className="font-heading text-3xl font-extrabold tracking-tighter text-[#f46cc3] lowercase mb-2">
-            assetflow
-          </p>
-
-          {loginView === "signin" && (
-            <>
-              <h1 className="font-heading mt-2 text-2xl font-semibold text-text-primary">
-                Sign in to continue
-              </h1>
-              <p className="mt-2 text-sm text-text-secondary">
-                Use a seeded account such as{" "}
-                <span className="text-text-primary">raj@assetflow.com</span> or{" "}
-                <span className="text-text-primary">alice@assetflow.com</span> /{" "}
-                <span className="text-text-primary">password123</span>.
-              </p>
-
-              <form onSubmit={handleLogin} className="mt-6 space-y-4">
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <div className="space-y-1">
-                    <Input
-                      id="password"
-                      type="password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                    />
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setLoginView("forgot")}
-                        className="text-xs font-semibold text-emerald-450 hover:text-emerald-400 transition outline-none mt-1"
-                      >
-                        Forgot password?
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                {loginError ? (
-                  <p className="text-sm text-warning">{loginError}</p>
-                ) : null}
-                <Button
-                  type="submit"
-                  className="w-full"
-                  isLoading={loginSubmitting}
-                >
-                  Sign in
-                </Button>
-              </form>
-            </>
-          )}
-
-          {loginView === "forgot" && (
-            <>
-              <h1 className="font-heading mt-2 text-2xl font-semibold text-text-primary">
-                Recover password
-              </h1>
-              <p className="mt-2 text-sm text-text-secondary">
-                Enter your email address and we will generate a password recovery token in the system logs.
-              </p>
-
-              <form onSubmit={handleForgotPassword} className="mt-6 space-y-4">
-                <div>
-                  <Label htmlFor="forgotEmail">Email</Label>
-                  <Input
-                    id="forgotEmail"
-                    type="email"
-                    required
-                    placeholder="john@assetflow.com"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                  />
-                </div>
-                
-                {forgotError && <p className="text-sm text-warning">{forgotError}</p>}
-                {forgotSuccess && <p className="text-sm text-emerald-400 font-semibold">{forgotSuccess}</p>}
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  isLoading={forgotSubmitting}
-                >
-                  Send Reset Token
-                </Button>
-                
-                <div className="flex flex-col gap-2 mt-4 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setLoginView("reset")}
-                    className="text-xs font-semibold text-emerald-455 hover:text-emerald-400 transition outline-none"
-                  >
-                    Have a reset token? Enter code
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLoginView("signin")}
-                    className="text-xs font-medium text-text-secondary hover:text-text-primary transition outline-none"
-                  >
-                    ← Back to Sign In
-                  </button>
-                </div>
-              </form>
-            </>
-          )}
-
-          {loginView === "reset" && (
-            <>
-              <h1 className="font-heading mt-2 text-2xl font-semibold text-text-primary">
-                Reset password
-              </h1>
-              <p className="mt-2 text-sm text-text-secondary">
-                Enter your security token and enter a secure new password.
-              </p>
-
-              <form onSubmit={handleResetPassword} className="mt-6 space-y-4">
-                <div>
-                  <Label htmlFor="resetToken">Reset Token</Label>
-                  <Input
-                    id="resetToken"
-                    type="text"
-                    required
-                    placeholder="Enter hex token"
-                    value={resetToken}
-                    onChange={(e) => setResetToken(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="resetNewPassword">New Password</Label>
-                  <Input
-                    id="resetNewPassword"
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={resetNewPassword}
-                    onChange={(e) => setResetNewPassword(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="resetConfirmPassword">Confirm Password</Label>
-                  <Input
-                    id="resetConfirmPassword"
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={resetConfirmPassword}
-                    onChange={(e) => setResetConfirmPassword(e.target.value)}
-                  />
-                </div>
-
-                {resetError && <p className="text-sm text-warning">{resetError}</p>}
-                {resetSuccess && <p className="text-sm text-emerald-400 font-semibold">{resetSuccess}</p>}
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  isLoading={resetSubmitting}
-                >
-                  Reset Password
-                </Button>
-                
-                <div className="flex flex-col gap-2 mt-4 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setLoginView("forgot")}
-                    className="text-xs font-semibold text-emerald-455 hover:text-emerald-400 transition outline-none"
-                  >
-                    ← Back to Recover Password
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLoginView("signin")}
-                    className="text-xs font-medium text-text-secondary hover:text-text-primary transition outline-none"
-                  >
-                    ← Back to Sign In
-                  </button>
-                </div>
-              </form>
-            </>
-          )}
-        </Card>
-      </main>
-    );
-  }
 
   return (
     <PageShell
@@ -380,7 +151,7 @@ export default function Home() {
       subtitle="A real-time snapshot of your company assets, active resource bookings, pending transfers, and overdue returns."
     >
       {dashboardError ? (
-        <div className="mb-6 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning-light">
+        <div className="mb-6 rounded-[1.25rem] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning-light">
           {dashboardError}
         </div>
       ) : null}
@@ -388,47 +159,47 @@ export default function Home() {
       {loadingDashboard ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-28" />
+            <Skeleton key={i} className="h-28 rounded-[2rem]" />
           ))}
         </div>
       ) : (
         <>
           <section>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-6 rounded-[2rem] bg-mathical-sand p-6 text-black border border-[#e8dfc7] divide-y md:divide-y-0 md:divide-x divide-black/10 select-none items-center shadow-md">
               <KpiCard
                 label="Assets Available"
                 value={kpis?.assets_available ?? "—"}
-                description="Unallocated and ready for deployment"
+                description="Ready for deployment"
                 icon={PackageCheck}
               />
               <KpiCard
                 label="Assets Allocated"
                 value={kpis?.assets_allocated ?? "—"}
-                description="Currently assigned to employees or departments"
+                description="Assigned to users"
                 icon={Users}
               />
               <KpiCard
                 label="Maintenance Today"
                 value={kpis?.maintenance_today ?? "—"}
-                description="Assets undergoing active repairs"
+                description="Under active repairs"
                 icon={Wrench}
               />
               <KpiCard
                 label="Active Bookings"
                 value={kpis?.active_bookings ?? "—"}
-                description="Rooms, vehicles, or equipment in use"
+                description="Resources in use"
                 icon={CalendarDays}
               />
               <KpiCard
                 label="Pending Transfers"
                 value={kpis?.pending_transfers ?? "—"}
-                description="Awaiting manager or head approval"
+                description="Awaiting approval"
                 icon={ArrowLeftRight}
               />
               <KpiCard
                 label="Overdue Returns"
                 value={kpis?.upcoming_returns ?? "—"}
-                description="Overdue return date limits"
+                description="Past expected date"
                 icon={ClockAlert}
                 accent={
                   kpis && kpis.upcoming_returns > 0 ? "warning" : undefined
@@ -438,57 +209,57 @@ export default function Home() {
           </section>
 
           {kpis && kpis.upcoming_returns > 0 && (
-            <div className="mt-6 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning-light">
-              {kpis.upcoming_returns} asset
-              {kpis.upcoming_returns !== 1 ? "s" : ""} overdue for return —
-              flagged for follow-up
+            <div className="mt-6 rounded-[1.25rem] border border-warning/30 bg-warning/10 px-5 py-3.5 text-sm text-warning-light font-medium">
+              {kpis.upcoming_returns} asset{kpis.upcoming_returns !== 1 ? "s" : ""} overdue for return — flagged for follow-up
             </div>
           )}
 
-          <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <Card>
+          <section className="mt-8 grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+            <Card className="bg-mathical-sand text-black border border-[#e8dfc7] p-7 shadow-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="font-heading text-lg font-semibold text-text-primary">
+                  <h2 className="font-heading text-xl font-extrabold text-black tracking-tight">
                     Overdue Return Logs
                   </h2>
-                  <p className="mt-1 text-xs text-text-secondary">
+                  <p className="mt-1 text-xs text-black/70 font-medium">
                     Assets currently overdue past their expected return date.
                   </p>
                 </div>
                 {overdue.length > 0 ? (
-                  <Badge variant="warning">{overdue.length} overdue</Badge>
+                  <Badge variant="warning" className="bg-mathical-pink text-black border-mathical-pink/40 px-3 py-1 font-extrabold text-[10px]">
+                    {overdue.length} overdue
+                  </Badge>
                 ) : null}
               </div>
 
-              <div className="mt-4 overflow-hidden rounded-lg border border-border-subtle">
-                <div className="grid grid-cols-[100px_1fr_1.1fr_1.1fr] gap-4 border-b border-border-subtle bg-bg-elevated px-4 py-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
+              <div className="mt-6 overflow-hidden rounded-[1.5rem] border border-black/10 bg-[#eae1cb]">
+                <div className="grid grid-cols-[100px_1fr_1.1fr_1.1fr] gap-4 border-b border-black/15 bg-[#e4dac0] px-5 py-4 text-xs font-bold uppercase tracking-widest text-black/80">
                   <span>Tag</span>
                   <span>Name</span>
                   <span>Allocated To</span>
                   <span>Expected Return</span>
                 </div>
-                <div className="divide-y divide-border-subtle">
+                <div className="divide-y divide-black/10">
                   {overdue.length === 0 ? (
-                    <div className="px-4 py-6 text-sm text-text-muted">
-                      No overdue assets found.
+                    <div className="px-5 py-8 text-sm text-black/60 font-semibold">
+                      No overdue assets found. Excellent!
                     </div>
                   ) : (
                     overdue.map((item) => (
                       <div
                         key={item.id}
-                        className="grid grid-cols-[100px_1fr_1.1fr_1.1fr] items-center gap-4 px-4 py-3 text-sm transition hover:bg-bg-elevated/50"
+                        className="grid grid-cols-[100px_1fr_1.1fr_1.1fr] items-center gap-4 px-5 py-4 text-sm transition hover:bg-black/5"
                       >
-                        <span className="font-semibold text-warning-light">
+                        <span className="font-extrabold text-[#c22d60]">
                           {item.asset_tag}
                         </span>
-                        <span className="truncate text-text-primary">
+                        <span className="truncate text-black font-semibold">
                           {item.asset_name}
                         </span>
-                        <span className="truncate text-text-secondary">
+                        <span className="truncate text-black/80 font-medium">
                           {item.target_name}
                         </span>
-                        <span className="text-text-muted">
+                        <span className="text-black/70 font-medium">
                           {new Date(item.expected_return_date).toLocaleDateString(
                             "en-IN",
                           )}
@@ -500,38 +271,40 @@ export default function Home() {
               </div>
             </Card>
 
-            <Card>
-              <h2 className="font-heading text-lg font-semibold text-text-primary">
-                Quick Actions
-              </h2>
-              <p className="mt-1 text-xs text-text-secondary">
-                Perform core resource workflows instantly.
-              </p>
-              <div className="mt-4 grid gap-3">
-                <QuickAction
-                  title="Register Asset"
-                  description="Record a new inventory asset"
-                  icon={Plus}
-                  href="/assets"
-                />
-                <QuickAction
-                  title="Book Resource"
-                  description="Schedule rooms, vehicles, or equipment"
-                  icon={Calendar}
-                  href="/bookings"
-                />
-                <QuickAction
-                  title="Raise Maintenance"
-                  description="Report a damaged asset"
-                  icon={Wrench}
-                  href="/maintenance"
-                />
-                <QuickAction
-                  title="Run Audit"
-                  description="Verify assets and check discrepancies"
-                  icon={ClipboardCheck}
-                  href="/audit"
-                />
+            <Card className="bg-[#090a09] border border-white/5 p-7 shadow-lg flex flex-col justify-between">
+              <div>
+                <h2 className="font-heading text-xl font-bold text-white tracking-tight">
+                  Quick Actions
+                </h2>
+                <p className="mt-1 text-xs text-text-muted">
+                  Perform core resource workflows instantly.
+                </p>
+                <div className="mt-6 grid gap-3">
+                  <QuickAction
+                    title="Register Asset"
+                    description="Record a new inventory asset"
+                    icon={Plus}
+                    href="/assets"
+                  />
+                  <QuickAction
+                    title="Book Resource"
+                    description="Schedule rooms, vehicles, or equipment"
+                    icon={Calendar}
+                    href="/bookings"
+                  />
+                  <QuickAction
+                    title="Raise Maintenance"
+                    description="Report a damaged asset"
+                    icon={Wrench}
+                    href="/maintenance"
+                  />
+                  <QuickAction
+                    title="Run Audit"
+                    description="Verify assets and check discrepancies"
+                    icon={ClipboardCheck}
+                    href="/audit"
+                  />
+                </div>
               </div>
             </Card>
           </section>
@@ -555,16 +328,16 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-4 rounded-lg border border-border-subtle bg-bg-elevated/50 px-4 py-3 transition hover:border-primary/40 hover:bg-primary/5"
+      className="group flex items-center gap-4 rounded-[1.5rem] border border-white/5 bg-[#121312] px-4 py-3.5 transition duration-200 hover:border-mathical-purple/50 hover:bg-mathical-purple/10"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-bg-input text-text-secondary transition group-hover:bg-primary/10 group-hover:text-primary-light">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-stone-900 text-stone-300 transition group-hover:bg-mathical-purple group-hover:text-white">
         <Icon className="h-5 w-5" />
       </span>
       <div>
-        <p className="text-sm font-semibold text-text-primary transition group-hover:text-primary-light">
+        <p className="text-sm font-bold text-white transition group-hover:text-mathical-purple">
           {title}
         </p>
-        <p className="text-xs text-text-secondary">{description}</p>
+        <p className="text-xs text-text-muted mt-0.5">{description}</p>
       </div>
     </Link>
   );

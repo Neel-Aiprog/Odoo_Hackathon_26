@@ -1,4 +1,7 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE =
+  typeof window !== "undefined"
+    ? `http://${window.location.hostname}:8000`
+    : (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000");
 
 type ApiError = { detail?: string | { msg: string }[] };
 
@@ -601,25 +604,5 @@ export async function updateMaintenanceStatus(id: number, payload: MaintenanceSt
     method: "PUT",
     body: JSON.stringify(payload),
   });
-}
-
-export function getAssetQrUrl(id: number): string {
-  return `${API_BASE}/api/assets/${id}/qr`;
-}
-
-export function getAuditCsvUrl(cycleId: number): string {
-  return `${API_BASE}/api/audits/cycles/${cycleId}/export/csv`;
-}
-
-export function getAuditPdfUrl(cycleId: number): string {
-  return `${API_BASE}/api/audits/cycles/${cycleId}/export/pdf`;
-}
-
-export function getMaintenanceCsvUrl(): string {
-  return `${API_BASE}/api/maintenance/export/csv`;
-}
-
-export function getMaintenancePdfUrl(): string {
-  return `${API_BASE}/api/maintenance/export/pdf`;
 }
 

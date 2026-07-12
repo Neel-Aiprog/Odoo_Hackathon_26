@@ -2,18 +2,15 @@
 
 import { useEffect, useState, useCallback, useMemo, type FormEvent } from "react";
 import {
-  getMe,
   getMaintenanceRequests,
   createMaintenanceRequest,
   updateMaintenanceStatus,
   getAssets,
-  login,
-  getMaintenanceCsvUrl,
-  getMaintenancePdfUrl,
   type User,
   type Asset,
   type MaintenanceRequest,
 } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
 import { PageShell } from "@/components/PageShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -23,6 +20,7 @@ import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
 import { Badge } from "@/components/ui/Badge";
 import { Wrench } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 const COLUMNS = [
   { id: "pending", label: "Pending", tone: "warning" as const },
@@ -33,12 +31,7 @@ const COLUMNS = [
 ] as const;
 
 export default function MaintenancePage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [loginEmail, setLoginEmail] = useState("mark@assetflow.com");
-  const [loginPassword, setLoginPassword] = useState("password123");
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [loginSubmitting, setLoginSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -60,13 +53,6 @@ export default function MaintenancePage() {
   const [resolveSubmitting, setResolveSubmitting] = useState(false);
 
   const canManage = user?.role === "admin" || user?.role === "asset_manager";
-
-  useEffect(() => {
-    getMe()
-      .then(setUser)
-      .catch(() => setUser(null))
-      .finally(() => setAuthLoading(false));
-  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -103,19 +89,7 @@ export default function MaintenancePage() {
     return groups;
   }, [requests]);
 
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoginSubmitting(true);
-    setLoginError(null);
-    try {
-      const result = await login(loginEmail, loginPassword);
-      setUser(result.user);
-    } catch (error) {
-      setLoginError(error instanceof Error ? error.message : "Login failed");
-    } finally {
-      setLoginSubmitting(false);
-    }
-  }
+
 
   async function handleRaiseRequest(e: FormEvent) {
     e.preventDefault();
@@ -202,205 +176,130 @@ export default function MaintenancePage() {
     }
   }
 
-  if (authLoading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-bg-app text-text-secondary">
-        Loading AssetFlow…
-      </main>
-    );
-  }
-
-  if (!user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-bg-app px-4 py-6">
-        <Card className="w-full max-w-md">
-          <p className="font-heading text-3xl font-extrabold tracking-tighter text-[#f46cc3] lowercase mb-2">
-            assetflow
-          </p>
-          <h1 className="font-heading mt-2 text-2xl font-semibold text-text-primary">
-            Sign in to continue
-          </h1>
-          <p className="mt-2 text-sm text-text-secondary">
-            Use <span className="text-text-primary">mark@assetflow.com</span> /{" "}
-            <span className="text-text-primary">password123</span>.
-          </p>
-          <form onSubmit={handleLogin} className="mt-6 space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <div className="space-y-1">
-                <Input
-                  id="password"
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                />
-                <div className="flex justify-end">
-                  <a
-                    href="/?view=forgot"
-                    className="text-xs font-semibold text-emerald-400 hover:text-emerald-350 transition outline-none mt-1"
-                  >
-                    Forgot password?
-                  </a>
-                </div>
-              </div>
-            </div>
-            {loginError ? (
-              <p className="text-sm text-warning">{loginError}</p>
-            ) : null}
-            <Button
-              type="submit"
-              className="w-full"
-              isLoading={loginSubmitting}
-            >
-              Sign in
-            </Button>
-          </form>
-        </Card>
-      </main>
-    );
-  }
-
   return (
     <PageShell
       currentItem="Maintenance"
       title="Maintenance Management"
       subtitle="Approve repair requests, assign technicians, and track work resolution cards."
       actions={
-        <div className="flex items-center gap-2">
-          <a
-            href={getMaintenancePdfUrl()}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-10 items-center justify-center rounded-xl bg-stone-200/5 hover:bg-stone-200/10 border border-stone-200/10 px-4 text-sm font-semibold text-stone-300 transition"
-          >
-            📄 PDF Report
-          </a>
-          <a
-            href={getMaintenanceCsvUrl()}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-10 items-center justify-center rounded-xl bg-stone-200/5 hover:bg-stone-200/10 border border-stone-200/10 px-4 text-sm font-semibold text-stone-300 transition"
-          >
-            📊 CSV Export
-          </a>
-          <Button onClick={() => setShowNewModal(true)}>
-            <Wrench className="mr-2 h-4 w-4" />
-            Raise Request
-          </Button>
-        </div>
+        <Button onClick={() => setShowNewModal(true)}>
+          <Wrench className="mr-2 h-4 w-4" />
+          Raise Request
+        </Button>
       }
     >
-      <div className="flex flex-1 gap-5 overflow-x-auto pb-2">
+      <div className="flex flex-1 gap-5 overflow-x-auto pb-4 select-none items-start">
         {COLUMNS.map((col) => {
           const list = groupedRequests[col.id] || [];
           return (
             <div
               key={col.id}
-              className="flex w-80 shrink-0 flex-col rounded-xl border border-border bg-bg-surface p-4"
+              className="flex w-80 shrink-0 flex-col rounded-[2.2rem] border border-white/5 bg-[#090a09] p-4 max-h-full"
             >
-              <div className="flex items-center justify-between border-b border-border-subtle pb-3">
-                <span className="text-sm font-semibold text-text-secondary">
+              <div className="flex items-center justify-between border-b border-white/5 pb-3 px-2">
+                <span className="text-sm font-bold text-white tracking-wide">
                   {col.label}
                 </span>
-                <Badge variant="muted">{list.length}</Badge>
+                <Badge variant="muted" className="bg-stone-900 text-stone-400 border-white/5 font-extrabold">{list.length}</Badge>
               </div>
 
-              <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
-                {list.map((req) => (
-                  <div
-                    key={req.id}
-                    className="rounded-lg border border-border-subtle bg-bg-elevated/50 p-4 transition hover:border-primary/30"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <Badge variant={col.tone}>{req.asset_tag}</Badge>
-                      <PriorityBadge priority={req.priority} />
-                    </div>
-
-                    <div className="mt-3">
-                      <h4 className="text-sm font-semibold text-text-primary">
-                        {req.asset_name}
-                      </h4>
-                      <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-                        {req.description}
-                      </p>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between border-t border-border-subtle pt-3 text-xs text-text-muted">
-                      <span>By {req.raised_by_name}</span>
-                      {req.technician_name && (
-                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary-light">
-                          Tech: {req.technician_name}
-                        </span>
+              <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1 max-h-[calc(100vh-220px)]">
+                {list.map((req) => {
+                  const isUrgent = req.priority === "critical" || req.priority === "high";
+                  const cardBg = isUrgent ? "bg-mathical-pink text-black" : "bg-mathical-sand text-black";
+                  return (
+                    <div
+                      key={req.id}
+                      className={cn(
+                        "rounded-[1.75rem] p-5 shadow-lg flex flex-col justify-between hover:scale-[1.02] transition duration-200 border-0",
+                        cardBg
                       )}
-                    </div>
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <Badge variant="default" className="bg-black text-white border-0 font-extrabold text-[10px]">
+                          {req.asset_tag}
+                        </Badge>
+                        <PriorityBadge priority={req.priority} />
+                      </div>
 
-                    {canManage && col.id !== "resolved" && (
-                      <div className="mt-3 flex gap-2 border-t border-border-subtle pt-3">
-                        {col.id === "pending" && (
-                          <>
+                      <div className="mt-4">
+                        <h4 className="text-sm font-extrabold text-black tracking-tight">
+                          {req.asset_name}
+                        </h4>
+                        <p className="mt-1.5 text-xs font-semibold leading-relaxed text-black/80">
+                          {req.description}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between border-t border-black/10 pt-3 text-[10px] font-bold text-black/60">
+                        <span>By {req.raised_by_name}</span>
+                        {req.technician_name && (
+                          <span className="rounded-full bg-black px-2.5 py-0.5 text-white font-extrabold">
+                            Tech: {req.technician_name}
+                          </span>
+                        )}
+                      </div>
+
+                      {canManage && col.id !== "resolved" && (
+                        <div className="mt-4 flex gap-2 border-t border-black/10 pt-3">
+                          {col.id === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                className="flex-1 text-[10px] bg-black text-white hover:bg-[#151615] rounded-full h-8"
+                                onClick={() => handleTransition(req.id, "approved")}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                className="text-[10px] bg-black text-[#ff4da6] border border-black/10 hover:bg-[#151615] rounded-full h-8 px-3"
+                                onClick={() => handleTransition(req.id, "rejected")}
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          {col.id === "approved" && (
                             <Button
                               size="sm"
                               variant="secondary"
-                              className="flex-1"
-                              onClick={() => handleTransition(req.id, "approved")}
+                              className="w-full text-[10px] bg-black text-white hover:bg-[#151615] rounded-full h-8"
+                              onClick={() => openAssignModal(req.id)}
                             >
-                              Approve
+                              Assign Tech
                             </Button>
+                          )}
+                          {col.id === "technician_assigned" && (
                             <Button
                               size="sm"
-                              variant="danger"
-                              onClick={() => handleTransition(req.id, "rejected")}
+                              variant="secondary"
+                              className="w-full text-[10px] bg-black text-white hover:bg-[#151615] rounded-full h-8"
+                              onClick={() => handleTransition(req.id, "in_progress")}
                             >
-                              Reject
+                              Start Repair
                             </Button>
-                          </>
-                        )}
-                        {col.id === "approved" && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="w-full"
-                            onClick={() => openAssignModal(req.id)}
-                          >
-                            Assign Tech
-                          </Button>
-                        )}
-                        {col.id === "technician_assigned" && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="w-full"
-                            onClick={() => handleTransition(req.id, "in_progress")}
-                          >
-                            Start Repair
-                          </Button>
-                        )}
-                        {col.id === "in_progress" && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="w-full"
-                            onClick={() => openResolveModal(req.id)}
-                          >
-                            Mark Resolved
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                          )}
+                          {col.id === "in_progress" && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="w-full text-[10px] bg-black text-white hover:bg-[#151615] rounded-full h-8"
+                              onClick={() => openResolveModal(req.id)}
+                            >
+                              Mark Resolved
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
                 {list.length === 0 && (
-                  <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-border-subtle">
-                    <p className="text-xs text-text-muted">No requests</p>
+                  <div className="flex h-32 items-center justify-center rounded-[1.5rem] border border-dashed border-white/5 bg-[#050605]">
+                    <p className="text-xs text-stone-500 font-bold">No requests</p>
                   </div>
                 )}
               </div>
@@ -526,15 +425,17 @@ export default function MaintenancePage() {
 }
 
 function PriorityBadge({ priority }: { priority: string }) {
-  const variant =
-    priority === "critical"
-      ? "warning"
-      : priority === "high"
-        ? "warning"
-        : priority === "low"
-          ? "muted"
-          : "primary";
-  return <Badge variant={variant}>{priority}</Badge>;
+  const bgColors = {
+    critical: "bg-black text-[#ff4da6] border-0",
+    high: "bg-black text-[#ff4da6] border-0",
+    medium: "bg-black text-mathical-purple border-0",
+    low: "bg-black text-stone-400 border-0",
+  };
+  return (
+    <Badge className={cn("font-extrabold capitalize text-[9px] px-2", bgColors[priority as keyof typeof bgColors] || "bg-black text-stone-300 border-0")}>
+      {priority}
+    </Badge>
+  );
 }
 
 function Modal({

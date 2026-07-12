@@ -12,10 +12,10 @@ import {
   type Department,
   type Employee,
   type Category,
-  getMe,
   type User,
 } from "@/lib/api";
-import { Sidebar } from "../Sidebar";
+import { useAuth } from "@/lib/AuthContext";
+import { PageShell } from "@/components/PageShell";
 
 function inputClassName(extra = "") {
   return [
@@ -27,10 +27,9 @@ function inputClassName(extra = "") {
 }
 
 export default function OrganizationPage() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"departments" | "categories" | "employees">("departments");
   const [loading, setLoading] = useState(true);
-  const [authLoading, setAuthLoading] = useState(true);
   
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -55,13 +54,6 @@ export default function OrganizationPage() {
   const [empDeptId, setEmpDeptId] = useState("");
   const [empError, setEmpError] = useState("");
   const [empSubmitting, setEmpSubmitting] = useState(false);
-
-  useEffect(() => {
-    getMe()
-      .then(setUser)
-      .catch(() => setUser(null))
-      .finally(() => setAuthLoading(false));
-  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -156,19 +148,7 @@ export default function OrganizationPage() {
     }
   }
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      window.location.href = "/";
-    }
-  }, [authLoading, user]);
-
-  if (authLoading || !user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#111412] text-stone-300">
-        Loading...
-      </main>
-    );
-  }
+  if (!user) return null;
 
 
   if (user.role !== "admin") {
@@ -192,17 +172,13 @@ export default function OrganizationPage() {
   }
 
   return (
-    <main className="flex min-h-screen bg-[#0f1110] text-stone-100 selection:bg-emerald-400/30 selection:text-emerald-300">
-      <Sidebar currentItem="Organization setup" />
-
-      <section className="flex-1 px-8 py-8 lg:px-12 lg:py-10 flex flex-col overflow-y-auto">
-        <header className="border-b border-stone-200/10 pb-5">
-            <h1 className="text-3xl font-semibold tracking-tight text-stone-50">Organization Setup</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-400">
-              Manage departments, asset categories, and employee roles. Admin access required for most actions.
-            </p>
-            <div className="mt-5 flex items-center justify-between border-b border-stone-200/10 pb-4">
-              <div className="flex items-center gap-3">
+    <PageShell
+      currentItem="Organization setup"
+      title="Organization Setup"
+      subtitle="Manage departments, asset categories, and employee roles. Admin access required for most actions."
+    >
+      <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
+        <div className="flex items-center gap-3">
                 {[
                   { id: "departments", label: "Departments" },
                   { id: "categories", label: "Categories" },
@@ -228,7 +204,6 @@ export default function OrganizationPage() {
                 + Add
               </button>
             </div>
-          </header>
 
           <div className="flex-1 overflow-auto p-5 lg:p-7">
             {loading ? (
@@ -451,8 +426,7 @@ export default function OrganizationPage() {
                 </section>
               </div>
             )}
-          </div>
-        </section>
-      </main>
-    );
-  }
+      </div>
+    </PageShell>
+  );
+}

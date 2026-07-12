@@ -11,9 +11,9 @@ import {
   type Asset,
   type Department,
   type Employee,
-  getMe,
   type User,
 } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
 import { PageShell } from "@/components/PageShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function AllocationsPage() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"checkout" | "returns">("checkout");
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +62,7 @@ export default function AllocationsPage() {
   const allocatedAssets = assets.filter((a) => a.status === "allocated");
 
   useEffect(() => {
-    getMe().then(setUser).catch(() => setUser(null));
+    // Replaced local getMe with global auth
   }, []);
 
   const loadData = useCallback(async () => {

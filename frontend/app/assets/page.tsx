@@ -9,13 +9,12 @@ import {
   getAsset,
   getAssets,
   getCategories,
-  getMe,
-  login,
   type Asset,
   type AssetDetail,
   type Category,
   type User,
 } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
 import { PageShell } from "@/components/PageShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -75,12 +74,7 @@ const defaultForm: AssetFormState = {
 };
 
 export default function AssetsPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [loginEmail, setLoginEmail] = useState("mark@assetflow.com");
-  const [loginPassword, setLoginPassword] = useState("password123");
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [loginSubmitting, setLoginSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -96,6 +90,8 @@ export default function AssetsPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [form, setForm] = useState<AssetFormState>({ ...defaultForm });
   const [submitting, setSubmitting] = useState(false);
+
+  const canRegister = user?.role === "admin" || user?.role === "asset_manager";
 
   const loadAssets = useCallback(async () => {
     setLoadingAssets(true);
@@ -118,19 +114,6 @@ export default function AssetsPage() {
   }, [query, categoryFilter, statusFilter, locationFilter]);
 
   const canRegister = user?.role === "admin" || user?.role === "asset_manager";
-
-  useEffect(() => {
-    setAuthLoading(true);
-    getMe()
-      .then((u) => {
-        setUser(u);
-        setAuthLoading(false);
-      })
-      .catch(() => {
-        setUser(null);
-        setAuthLoading(false);
-      });
-  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -158,20 +141,6 @@ export default function AssetsPage() {
     const values = new Set(assets.map((asset) => asset.location).filter(Boolean));
     return Array.from(values).sort();
   }, [assets]);
-
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoginSubmitting(true);
-    setLoginError(null);
-    try {
-      const result = await login(loginEmail, loginPassword);
-      setUser(result.user);
-    } catch (error) {
-      setLoginError(error instanceof Error ? error.message : "Login failed");
-    } finally {
-      setLoginSubmitting(false);
-    }
-  }
 
   async function handleSelectAsset(asset: Asset) {
     try {
@@ -231,69 +200,6 @@ export default function AssetsPage() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (authLoading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-bg-app text-text-secondary">
-        Loading AssetFlow…
-      </main>
-    );
-  }
-
-  if (!user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-bg-app px-4 py-6">
-        <Card className="w-full max-w-md">
-          <p className="font-heading text-3xl font-extrabold tracking-tighter text-[#f46cc3] lowercase mb-2">assetflow</p>
-          <h1 className="font-heading mt-2 text-2xl font-semibold text-text-primary">Sign in to continue</h1>
-          <p className="mt-2 text-sm text-text-secondary">
-            Use <span className="text-text-primary">mark@assetflow.com</span> /{" "}
-            <span className="text-text-primary">password123</span>.
-          </p>
-          <form onSubmit={handleLogin} className="mt-6 space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={loginEmail}
-                onChange={(event) => setLoginEmail(event.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <div className="space-y-1">
-                <Input
-                  id="password"
-                  type="password"
-                  value={loginPassword}
-                  onChange={(event) => setLoginPassword(event.target.value)}
-                />
-                <div className="flex justify-end">
-                  <a
-                    href="/?view=forgot"
-                    className="text-xs font-semibold text-emerald-455 hover:text-emerald-400 transition outline-none mt-1"
-                  >
-                    Forgot password?
-                  </a>
-                </div>
-              </div>
-            </div>
-            {loginError ? (
-              <p className="text-sm text-warning">{loginError}</p>
-            ) : null}
-            <button
-              type="submit"
-              disabled={loginSubmitting}
-              className="h-11 w-full rounded-2xl bg-emerald-300 px-4 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-200 disabled:opacity-60"
-            >
-              {loginSubmitting ? "Signing in..." : "Sign in"}
-            </button>
-          </form>
-        </Card>
-      </main>
-    );
   }
 
   return (
@@ -429,18 +335,6 @@ export default function AssetsPage() {
                   <InfoPill icon={Banknote} label="Acquisition Cost" value={`₹${selectedAsset.acquisition_cost.toLocaleString("en-IN")}`} />
                   <InfoPill icon={Calendar} label="Acquired On" value={selectedAsset.acquisition_date} />
                 </div>
-
-                {selectedAsset.photo_url && (
-                  <div className="pt-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Asset Photo</p>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={selectedAsset.photo_url}
-                      alt={selectedAsset.name}
-                      className="mt-2 max-h-48 rounded-lg object-contain"
-                    />
-                  </div>
-                )}
               </Card>
 
               <Card className="space-y-4">
@@ -483,13 +377,26 @@ export default function AssetsPage() {
         </div>
 
         <aside className="space-y-5">
-          {canRegister && (
-            <div id="register-form">
-              <Card className="space-y-4">
-              <h2 className="font-heading text-lg font-semibold text-text-primary">Register Asset</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Asset Name</Label>
+          <Card id="register-form">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-text-muted">
+                  Registration form
+                </p>
+                <h2 className="font-heading mt-1 text-xl font-semibold text-text-primary">
+                  Register asset
+                </h2>
+              </div>
+              <Badge variant="muted">Tag auto-generated</Badge>
+            </div>
+
+            {!canRegister ? (
+              <p className="mt-5 text-sm text-text-secondary">
+                Only admins and asset managers can register new assets.
+              </p>
+            ) : (
+              <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+                <Field label="Name" error={errors.name}>
                   <Input
                     id="name"
                     value={form.name}
@@ -616,9 +523,8 @@ export default function AssetsPage() {
                   Register Asset
                 </Button>
               </form>
-            </Card>
-            </div>
-          )}
+            )}
+          </Card>
 
           <Card className="space-y-4">
             <h3 className="font-heading text-lg font-semibold text-text-primary">Registry Summary</h3>

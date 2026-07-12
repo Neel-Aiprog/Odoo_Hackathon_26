@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getMe, getReportsData, type ReportsResponse, type User } from "@/lib/api";
-import { Sidebar } from "../Sidebar";
+import { getReportsData, type ReportsResponse, type User } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
+import { PageShell } from "@/components/PageShell";
+import { Button } from "@/components/ui/Button";
 
 export default function ReportsPage() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [data, setData] = useState<ReportsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    getMe()
-      .then(setUser)
-      .catch(() => setUser(null));
-
     getReportsData()
       .then(setData)
       .catch(console.error)
@@ -79,18 +77,17 @@ export default function ReportsPage() {
   const maxMaintCount = data?.maintenance_frequency.reduce((max, item) => Math.max(max, item.count), 1) ?? 1;
 
   return (
-    <main className="flex min-h-screen bg-[#0f1110] text-stone-100 selection:bg-emerald-400/30 selection:text-emerald-300">
-      <Sidebar currentItem="Reports" />
-
-      <section className="flex-1 px-8 py-8 lg:px-12 lg:py-10 flex flex-col overflow-y-auto">
-        <header className="border-b border-stone-200/10 pb-5">
-            <h1 className="text-3xl font-semibold tracking-tight text-stone-50">Reports &amp; Analytics</h1>
-            <p className="mt-1 text-sm text-stone-400">
-              Actionable operational insights, trends, utilization metrics and lifecycle alerts.
-            </p>
-          </header>
-
-          <div className="flex-1 overflow-auto p-5 lg:p-7 space-y-8">
+    <PageShell
+      currentItem="Reports"
+      title="Reports & Analytics"
+      subtitle="Actionable operational insights, trends, utilization metrics and lifecycle alerts."
+      actions={
+        <Button onClick={handleExport} isLoading={exporting}>
+          Export Report
+        </Button>
+      }
+    >
+      <div className="flex-1 overflow-auto p-5 lg:p-7 space-y-8">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <p className="text-stone-400">Loading analytics data...</p>
@@ -247,20 +244,9 @@ export default function ReportsPage() {
                   </div>
                 </div>
 
-                {/* Export Report Action */}
-                <div className="pt-2">
-                  <button
-                    onClick={handleExport}
-                    disabled={exporting}
-                    className="rounded-xl border border-rose-950/80 bg-rose-950/20 hover:bg-rose-950/45 px-6 py-2.5 text-sm font-semibold text-rose-300 transition-all shadow-[0_0_15px_rgba(239,68,68,0.05)] disabled:opacity-50"
-                  >
-                    {exporting ? "Exporting..." : "Export report"}
-                  </button>
-                </div>
               </>
             )}
-          </div>
-        </section>
-      </main>
-    );
-  }
+      </div>
+    </PageShell>
+  );
+}

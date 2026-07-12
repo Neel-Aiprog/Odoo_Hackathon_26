@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Archivo, Lato, Geist_Mono } from "next/font/google";
+import { Outfit, Lexend, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NotificationProvider } from "@/lib/NotificationContext";
+import { AuthProvider } from "@/lib/AuthContext";
+import { AuthGate } from "@/components/AuthGate";
 
-const archivo = Archivo({
-  variable: "--font-archivo",
+const fontOutfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
 });
 
-const lato = Lato({
-  variable: "--font-lato",
+const fontLexend = Lexend({
+  variable: "--font-lexend",
   subsets: ["latin"],
-  weight: ["400", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -22,7 +22,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "AssetFlow",
-  description: "Enterprise asset and resource management",
+  description: "Enterprise asset & resource management",
 };
 
 export default function RootLayout({
@@ -33,12 +33,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${archivo.variable} ${lato.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${fontOutfit.variable} ${fontLexend.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
+      <body className="min-h-full flex flex-col bg-black">
+        <AuthProvider>
+          <NotificationProvider>
+            <AuthGate>
+              {children}
+            </AuthGate>
+          </NotificationProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,10 +1,7 @@
 from typing import List, Optional
 from datetime import date
-import io
-import qrcode
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session
@@ -214,24 +211,3 @@ def get_asset_detail(id: int, db: Session = Depends(get_db), current_user: Emplo
         "allocation_history": alloc_history,
         "maintenance_history": maint_history,
     }
-
-
-@router.get("/assets/{id}/qr")
-def get_asset_qr(id: int, db: Session = Depends(get_db), current_user: Employee = Depends(get_current_user)):
-    asset = db.get(Asset, id)
-    if not asset:
-        raise HTTPException(status_code=404, detail="Asset not found.")
-    
-    # QR code data contains URL and asset tag
-    qr_data = f"http://localhost:3000/assets?id={asset.id}&tag={asset.asset_tag}"
-    
-    qr = qrcode.QRCode(version=1, box_size=10, border=4)
-    qr.add_data(qr_data)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    img_byte_arr = io.BytesIO()
-    img.save(img_byte_arr, format='PNG')
-    img_byte_arr.seek(0)
-    
-    return StreamingResponse(img_byte_arr, media_type="image/png")

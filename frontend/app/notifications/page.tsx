@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { getMe, getActivityLogs, type ActivityLog, type User, type NotificationItem } from "@/lib/api";
+import { getActivityLogs, type ActivityLog, type User, type NotificationItem } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
+import { PageShell } from "@/components/PageShell";
 import { useNotifications } from "@/lib/NotificationContext";
-import { Sidebar } from "../Sidebar";
 
 function timeAgo(dateString: string): string {
   const now = new Date();
@@ -21,17 +22,13 @@ function timeAgo(dateString: string): string {
 }
 
 export default function NotificationsPage() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const { notifications, markAsRead, fetchNotificationsList } = useNotifications();
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [activeTab, setActiveTab] = useState<"all" | "alerts" | "approvals" | "bookings">("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getMe()
-      .then(setUser)
-      .catch(() => setUser(null));
-
     // Fetch notifications & activity logs
     Promise.all([fetchNotificationsList(), getActivityLogs()])
       .then(([_, logs]) => {
@@ -73,18 +70,12 @@ export default function NotificationsPage() {
   if (!user) return null;
 
   return (
-    <main className="flex min-h-screen bg-[#0f1110] text-stone-100 selection:bg-emerald-400/30 selection:text-emerald-300">
-      <Sidebar currentItem="Notifications" />
-
-      <section className="flex-1 px-8 py-8 lg:px-12 lg:py-10 flex flex-col overflow-y-auto">
-        <header className="border-b border-stone-200/10 pb-5">
-            <h1 className="text-3xl font-semibold tracking-tight text-stone-50">Notifications &amp; Activity Logs</h1>
-            <p className="mt-1 text-sm text-stone-400">
-              Stay updated on asset assignments, transfer requests, booking approvals, and system activities.
-            </p>
-          </header>
-
-          <div className="flex-1 overflow-auto p-5 lg:p-7 space-y-6">
+    <PageShell
+      currentItem="Notifications"
+      title="Notifications & Activity Logs"
+      subtitle="Stay updated on asset assignments, transfer requests, booking approvals, and system activities."
+    >
+      <div className="flex-1 overflow-auto p-5 lg:p-7 space-y-6">
             {/* Tab Pill Buttons */}
             <div className="flex flex-wrap gap-2.5">
               {(["all", "alerts", "approvals", "bookings"] as const).map((tab) => (
@@ -190,8 +181,7 @@ export default function NotificationsPage() {
                 </div>
               </div>
             )}
-          </div>
-        </section>
-      </main>
-    );
-  }
+      </div>
+    </PageShell>
+  );
+}

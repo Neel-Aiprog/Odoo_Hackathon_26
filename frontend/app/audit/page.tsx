@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   getAuditCycles,
   createAuditCycle,
@@ -9,17 +9,15 @@ import {
   closeAuditCycle,
   getDepartments,
   getEmployees,
-  getMe,
-  getAuditCsvUrl,
-  getAuditPdfUrl,
   type AuditCycle,
   type AuditItem,
   type Department,
   type Employee,
   type User,
 } from "@/lib/api";
-import { Sidebar } from "../Sidebar";
-import jsQR from "jsqr";
+import { useAuth } from "@/lib/AuthContext";
+import { PageShell } from "@/components/PageShell";
+import { Button } from "@/components/ui/Button";
 
 const STATUS_STYLES: Record<string, string> = {
   verified: "border-emerald-400/50 text-emerald-300",
@@ -38,7 +36,7 @@ function inputCls(extra = "") {
 }
 
 export default function AuditPage() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [cycles, setCycles] = useState<AuditCycle[]>([]);
   const [selectedCycle, setSelectedCycle] = useState<AuditCycle | null>(null);
   const [items, setItems] = useState<AuditItem[]>([]);
@@ -62,15 +60,8 @@ export default function AuditPage() {
   // Closing
   const [closing, setClosing] = useState(false);
 
-  // Scanner & Reports state
-  const [showScanner, setShowScanner] = useState(false);
-  const [scannerError, setScannerError] = useState("");
-  const [scanFeedback, setScanFeedback] = useState("");
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
   useEffect(() => {
-    getMe().then(setUser).catch(() => setUser(null));
+    // Replaced local getMe with global auth
   }, []);
 
   const loadCycles = useCallback(async () => {
@@ -143,111 +134,6 @@ export default function AuditPage() {
     }
   }
 
-  const handleQrCheckIn = useCallback(async (assetId: number, assetTag: string) => {
-    const matchingItem = items.find(i => i.asset_id === assetId);
-    if (!matchingItem) {
-      alert(`Asset ${assetTag || `#${assetId}`} is not part of this active audit cycle!`);
-      return;
-    }
-    if (matchingItem.verification_status === "verified") {
-      return;
-    }
-    try {
-      const updated = await updateAuditItem(matchingItem.id, "verified");
-      setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
-    } catch (err) {
-      console.error("QR Verification check-in failed:", err);
-      alert("Failed to verify scanned asset.");
-    }
-  }, [items]);
-
-  useEffect(() => {
-    if (!showScanner) return;
-    
-    let stream: MediaStream | null = null;
-    let animationFrameId: number;
-    let isScanning = true;
-    
-    async function startCamera() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.setAttribute("playsinline", "true");
-          videoRef.current.play();
-          requestAnimationFrame(tick);
-        }
-      } catch (err) {
-        console.error(err);
-        setScannerError("Unable to access camera. Please verify permissions.");
-      }
-    }
-    
-    function tick() {
-      if (!isScanning) return;
-      
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (ctx) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "dontInvert",
-          });
-          
-          if (code) {
-            console.log("QR Code Decoded:", code.data);
-            try {
-              const url = new URL(code.data);
-              const assetId = url.searchParams.get("id");
-              const assetTag = url.searchParams.get("tag") || "";
-              
-              if (assetId) {
-                handleQrCheckIn(Number(assetId), assetTag);
-                isScanning = false;
-                setScanFeedback(`Checked in asset: ${assetTag || `#${assetId}`}`);
-                setTimeout(() => {
-                  setShowScanner(false);
-                  setScanFeedback("");
-                }, 2000);
-                return;
-              }
-            } catch (urlErr) {
-              const match = code.data.match(/id=(\d+)/);
-              if (match && match[1]) {
-                handleQrCheckIn(Number(match[1]), "");
-                isScanning = false;
-                setScanFeedback(`Checked in asset!`);
-                setTimeout(() => {
-                  setShowScanner(false);
-                  setScanFeedback("");
-                }, 2000);
-                return;
-              } else {
-                setScannerError("Invalid QR label content.");
-              }
-            }
-          }
-        }
-      }
-      animationFrameId = requestAnimationFrame(tick);
-    }
-    
-    startCamera();
-    
-    return () => {
-      isScanning = false;
-      cancelAnimationFrame(animationFrameId);
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [showScanner, handleQrCheckIn]);
-
   async function handleClose() {
     if (!selectedCycle) return;
     setClosing(true);
@@ -268,31 +154,19 @@ export default function AuditPage() {
   if (!user) return null;
 
   return (
-    <>
-    <main className="flex min-h-screen bg-[#0f1110] text-stone-100 selection:bg-emerald-400/30 selection:text-emerald-300">
-      <Sidebar currentItem="Audit" />
-
-      <section className="flex-1 px-8 py-8 lg:px-12 lg:py-10 flex flex-col overflow-y-auto">
-        <header className="border-b border-stone-200/10 pb-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-stone-50">Asset Audit</h1>
-                <p className="mt-1 text-sm text-stone-400">
-                  Run structured verification cycles — mark assets verified, missing, or damaged.
-                </p>
-              </div>
-              {canManage && (
-                <button
-                  onClick={() => setShowCreate(v => !v)}
-                  className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-5 py-1.5 text-sm font-medium text-emerald-300 transition hover:bg-emerald-400/20"
-                >
-                  {showCreate ? "Cancel" : "+ New Cycle"}
-                </button>
-              )}
-            </div>
-          </header>
-
-          <div className="flex-1 overflow-auto p-5 lg:p-7 space-y-6">
+    <PageShell
+      currentItem="Audit"
+      title="Asset Audit"
+      subtitle="Run structured verification cycles — mark assets verified, missing, or damaged."
+      actions={
+        canManage ? (
+          <Button onClick={() => setShowCreate((v) => !v)}>
+            {showCreate ? "Cancel" : "+ New Cycle"}
+          </Button>
+        ) : null
+      }
+    >
+      <div className="flex-1 overflow-auto p-5 lg:p-7 space-y-6">
             {/* Create form */}
             {showCreate && (
               <section className="rounded-[1.5rem] border border-stone-200/10 bg-[#171b17] p-6 max-w-2xl">
@@ -398,44 +272,12 @@ export default function AuditPage() {
                 {selectedCycle && (
                   <section>
                     {/* Cycle info banner */}
-                    <div className="rounded-[1.25rem] border border-stone-200/15 bg-stone-800/40 px-5 py-4 mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div>
-                        <p className="font-semibold text-stone-100">{selectedCycle.name}</p>
-                        <p className="text-sm text-stone-400 mt-1">
-                          {selectedCycle.start_date} – {selectedCycle.end_date} ·{" "}
-                          Auditors: {selectedCycle.auditors.map(a => a.name).join(", ") || "None assigned"}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {selectedCycle.status === "open" && (
-                          <button
-                            onClick={() => {
-                              setScannerError("");
-                              setScanFeedback("");
-                              setShowScanner(true);
-                            }}
-                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-400/10 hover:bg-emerald-400/20 border border-emerald-400/30 px-4 py-2 text-sm font-semibold text-emerald-300 transition"
-                          >
-                            📷 Scan QR Check-in
-                          </button>
-                        )}
-                        <a
-                          href={getAuditPdfUrl(selectedCycle.id)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-stone-200/5 hover:bg-stone-200/10 border border-stone-200/10 px-4 py-2 text-sm font-semibold text-stone-300 transition"
-                        >
-                          📄 Export PDF
-                        </a>
-                        <a
-                          href={getAuditCsvUrl(selectedCycle.id)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-stone-200/5 hover:bg-stone-200/10 border border-stone-200/10 px-4 py-2 text-sm font-semibold text-stone-300 transition"
-                        >
-                          📊 Export CSV
-                        </a>
-                      </div>
+                    <div className="rounded-[1.25rem] border border-stone-200/15 bg-stone-800/40 px-5 py-4 mb-5">
+                      <p className="font-semibold text-stone-100">{selectedCycle.name}</p>
+                      <p className="text-sm text-stone-400 mt-1">
+                        {selectedCycle.start_date} – {selectedCycle.end_date} ·{" "}
+                        Auditors: {selectedCycle.auditors.map(a => a.name).join(", ") || "None assigned"}
+                      </p>
                     </div>
 
                     {/* Items table */}
@@ -519,54 +361,7 @@ export default function AuditPage() {
                 )}
               </div>
             )}
-          </div>
-        </section>
-      </main>
-
-      {showScanner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="w-full max-w-md rounded-[2rem] border border-stone-200/15 bg-stone-900 p-6 shadow-2xl space-y-6 text-center">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-stone-50">Scan Asset QR Code</h3>
-              <button
-                onClick={() => setShowScanner(false)}
-                className="text-stone-400 hover:text-stone-200 text-lg p-1"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black border border-stone-200/10">
-              <video
-                ref={videoRef}
-                className="h-full w-full object-cover"
-              />
-              <canvas
-                ref={canvasRef}
-                className="hidden"
-              />
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="w-36 h-36 border-2 border-emerald-400 border-dashed rounded-2xl opacity-60 animate-pulse" />
-              </div>
-            </div>
-
-            {scanFeedback ? (
-              <p className="text-sm text-emerald-400 font-semibold animate-bounce">{scanFeedback}</p>
-            ) : scannerError ? (
-              <p className="text-sm text-rose-400 font-semibold">{scannerError}</p>
-            ) : (
-              <p className="text-xs text-stone-400">Position the asset label QR code within the framing grid.</p>
-            )}
-
-            <button
-              onClick={() => setShowScanner(false)}
-              className="h-11 w-full rounded-2xl border border-stone-200/10 hover:bg-stone-200/5 text-sm font-medium text-stone-300 transition"
-            >
-              Cancel Scan
-            </button>
-          </div>
-        </div>
-      )}
-    </>
+      </div>
+    </PageShell>
   );
 }

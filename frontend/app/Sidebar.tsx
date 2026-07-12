@@ -109,86 +109,89 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
   }
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-bg-surface lg:flex">
-      <div className="px-5 py-6">
-        <p className="font-heading text-3xl font-extrabold tracking-tighter text-[#f46cc3] lowercase">
-          assetflow
-        </p>
-        <p className="mt-1.5 text-xs leading-relaxed text-text-muted">
-          Enterprise asset &amp; resource management
-        </p>
+    <aside className="hidden w-64 shrink-0 flex-col bg-black lg:flex p-4 h-screen select-none">
+      <div className="flex flex-col h-full rounded-[2rem] bg-[#090a09] border border-white/5 p-5 overflow-y-auto">
+        <div className="px-2 py-4 mb-4">
+          <p className="font-heading text-3xl font-extrabold tracking-tighter text-mathical-pink lowercase">
+            assetflow
+          </p>
+          <p className="mt-1 text-[9px] tracking-widest uppercase text-stone-500 font-bold">
+            enterprise management
+          </p>
+        </div>
+
+        <nav className="flex-1 space-y-1.5 px-1">
+          {items.map((item) => {
+            const isCurrent = item.name === currentItem;
+            const showBadge = item.name === "Notifications" && unreadCount > 0;
+            const Icon = ICONS[item.name];
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center justify-between px-4 py-2.5 text-sm font-medium transition duration-200 ${
+                  isCurrent
+                    ? "bg-mathical-purple text-white rounded-full shadow-[0_4px_14px_rgba(76,81,230,0.3)]"
+                    : "text-text-muted hover:bg-stone-900 hover:text-text-primary rounded-full"
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  {Icon ? <Icon className="h-4 w-4" /> : null}
+                  {item.name}
+                </span>
+                {showBadge ? (
+                  <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-mathical-pink px-1.5 text-[10px] font-bold text-black">
+                    {unreadCount}
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {user && (
+          <div className="border-t border-white/5 pt-4 mt-6 shrink-0">
+            <div className="rounded-[1.25rem] bg-[#121312] p-3.5 border border-white/5">
+              <p className="truncate text-xs font-bold text-stone-200">
+                {user.name}
+              </p>
+              <p className="text-[10px] capitalize text-mathical-pink font-semibold mt-0.5">
+                {user.role.replace("_", " ")}
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                    setPasswordError("");
+                    setShowCurrent(false);
+                    setShowNew(false);
+                    setShowConfirm(false);
+                    setShowPasswordModal(true);
+                  }}
+                  className="flex-1 h-8 rounded-xl bg-stone-900 border border-white/5 text-[10px] font-bold text-stone-300 hover:bg-stone-800 transition"
+                >
+                  Password
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex-1 h-8 rounded-xl bg-mathical-pink text-black text-[10px] font-extrabold hover:bg-[#eb7ea1] transition"
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <nav className="flex-1 space-y-1 px-3">
-        {items.map((item) => {
-          const isCurrent = item.name === currentItem;
-          const showBadge = item.name === "Notifications" && unreadCount > 0;
-          const Icon = ICONS[item.name];
-
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                isCurrent
-                  ? "bg-primary/10 text-primary-light"
-                  : "text-text-secondary hover:bg-bg-elevated hover:text-text-primary"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                {Icon ? <Icon className="h-4 w-4" /> : null}
-                {item.name}
-              </span>
-              {showBadge ? (
-                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-warning px-1.5 text-[10px] font-bold text-primary-inverse">
-                  {unreadCount}
-                </span>
-              ) : null}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {user && (
-        <div className="border-t border-border p-4">
-          <div className="mb-3">
-            <p className="truncate text-sm font-medium text-text-primary">
-              {user.name}
-            </p>
-            <p className="text-xs capitalize text-text-muted">
-              {user.role.replace("_", " ")}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentPassword("");
-                setNewPassword("");
-                setConfirmPassword("");
-                setPasswordError("");
-                setShowCurrent(false);
-                setShowNew(false);
-                setShowConfirm(false);
-                setShowPasswordModal(true);
-              }}
-              className="mt-3 flex h-9 w-full items-center justify-center rounded-xl border border-stone-200/10 bg-stone-200/5 text-xs font-medium text-stone-300 hover:bg-stone-200/10 transition"
-            >
-              Change password
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-border bg-bg-elevated text-xs font-medium text-text-secondary transition hover:border-warning/40 hover:text-warning"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sign out
-          </button>
-        </div>
-      )}
-
       {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-[2rem] border border-stone-200/15 bg-[#141714] p-6 shadow-2xl space-y-6 text-left">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-[2.2rem] border border-white/10 bg-[#090a09] p-7 shadow-2xl space-y-6 text-left">
             <div>
               <h3 className="text-xl font-bold text-stone-50">Update Password</h3>
               <p className="text-sm text-stone-400 mt-1">Please enter your current password and choose a secure new one.</p>
@@ -204,7 +207,7 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="h-11 w-full rounded-2xl border border-stone-200/15 bg-stone-950/45 pl-4 pr-10 text-sm text-stone-100 outline-none focus:border-emerald-300/50"
+                    className="h-11 w-full rounded-2xl border border-white/10 bg-[#121312] pl-4 pr-10 text-sm text-stone-100 outline-none focus:border-mathical-purple/50"
                   />
                   <button
                     type="button"
@@ -224,7 +227,7 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="h-11 w-full rounded-2xl border border-stone-200/15 bg-stone-950/45 pl-4 pr-10 text-sm text-stone-100 outline-none focus:border-emerald-300/50"
+                    className="h-11 w-full rounded-2xl border border-white/10 bg-[#121312] pl-4 pr-10 text-sm text-stone-100 outline-none focus:border-mathical-purple/50"
                   />
                   <button
                     type="button"
@@ -244,7 +247,7 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="h-11 w-full rounded-2xl border border-stone-200/15 bg-stone-950/45 pl-4 pr-10 text-sm text-stone-100 outline-none focus:border-emerald-300/50"
+                    className="h-11 w-full rounded-2xl border border-white/10 bg-[#121312] pl-4 pr-10 text-sm text-stone-100 outline-none focus:border-mathical-purple/50"
                   />
                   <button
                     type="button"
@@ -262,14 +265,14 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
                 <button
                   type="button"
                   onClick={() => setShowPasswordModal(false)}
-                  className="flex-1 h-11 rounded-2xl border border-stone-200/10 hover:bg-stone-200/5 text-sm font-medium text-stone-300 transition"
+                  className="flex-1 h-11 rounded-2xl border border-white/10 hover:bg-stone-900 text-sm font-medium text-stone-300 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={passwordSubmitting}
-                  className="flex-1 h-11 rounded-2xl bg-emerald-300 hover:bg-emerald-200 text-sm font-semibold text-emerald-950 transition disabled:opacity-60"
+                  className="flex-1 h-11 rounded-2xl bg-mathical-purple hover:opacity-90 text-sm font-semibold text-white transition disabled:opacity-60"
                 >
                   {passwordSubmitting ? "Updating..." : "Update Password"}
                 </button>

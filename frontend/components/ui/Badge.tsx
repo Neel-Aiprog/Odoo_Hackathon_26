@@ -11,21 +11,21 @@ export function Badge({
 }) {
   const variants = {
     default:
-      "border-border bg-bg-elevated text-text-secondary",
+      "border-white/5 bg-stone-900 text-stone-200",
     primary:
-      "border-primary/30 bg-primary/10 text-primary-light",
+      "border-mathical-purple/35 bg-mathical-purple/10 text-[#6e73ff] font-semibold",
     warning:
-      "border-warning/30 bg-warning/10 text-warning-light",
+      "border-mathical-pink/35 bg-mathical-pink/10 text-mathical-pink font-semibold",
     success:
-      "border-success/30 bg-success/10 text-success",
+      "border-mathical-lime/35 bg-mathical-lime/10 text-mathical-lime font-semibold",
     muted:
-      "border-border-subtle bg-bg-input text-text-muted",
+      "border-white/5 bg-stone-950 text-stone-500",
   };
 
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold select-none",
         variants[variant],
         className,
       )}

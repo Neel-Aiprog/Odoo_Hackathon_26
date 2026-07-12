@@ -2,16 +2,15 @@
 
 import { useEffect, useState, useCallback, useMemo, type FormEvent } from "react";
 import {
-  getMe,
   getResources,
   getBookings,
   createBooking,
   cancelBooking,
-  login,
   type User,
   type Resource,
   type Booking,
 } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
 import { PageShell } from "@/components/PageShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -20,12 +19,7 @@ import { Select } from "@/components/ui/Select";
 import { Label } from "@/components/ui/Label";
 
 export default function BookingsPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [loginEmail, setLoginEmail] = useState("mark@assetflow.com");
-  const [loginPassword, setLoginPassword] = useState("password123");
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [loginSubmitting, setLoginSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const [resources, setResources] = useState<Resource[]>([]);
   const [selectedResourceId, setSelectedResourceId] = useState<number | "">("");
@@ -45,13 +39,6 @@ export default function BookingsPage() {
   const activeResource = useMemo(() => {
     return resources.find((r) => r.id === Number(selectedResourceId)) || null;
   }, [resources, selectedResourceId]);
-
-  useEffect(() => {
-    getMe()
-      .then(setUser)
-      .catch(() => setUser(null))
-      .finally(() => setAuthLoading(false));
-  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -108,20 +95,6 @@ export default function BookingsPage() {
     }
     return null;
   }, [selectedResourceId, selectedDate, startTime, endTime, dailyBookings]);
-
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoginSubmitting(true);
-    setLoginError(null);
-    try {
-      const result = await login(loginEmail, loginPassword);
-      setUser(result.user);
-    } catch (error) {
-      setLoginError(error instanceof Error ? error.message : "Login failed");
-    } finally {
-      setLoginSubmitting(false);
-    }
-  }
 
   async function handleCreateBooking(e: FormEvent) {
     e.preventDefault();
@@ -183,72 +156,7 @@ export default function BookingsPage() {
     return { top: `${top}px`, height: `${height}px` };
   };
 
-  if (authLoading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-bg-app text-text-secondary">
-        Loading AssetFlow…
-      </main>
-    );
-  }
-
-  if (!user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-bg-app px-4 py-6">
-        <Card className="w-full max-w-md">
-          <p className="font-heading text-3xl font-extrabold tracking-tighter text-[#f46cc3] lowercase mb-2">
-            assetflow
-          </p>
-          <h1 className="font-heading mt-2 text-2xl font-semibold text-text-primary">
-            Sign in to continue
-          </h1>
-          <p className="mt-2 text-sm text-text-secondary">
-            Use <span className="text-text-primary">mark@assetflow.com</span> /{" "}
-            <span className="text-text-primary">password123</span>.
-          </p>
-          <form onSubmit={handleLogin} className="mt-6 space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <div className="space-y-1">
-                <Input
-                  id="password"
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                />
-                <div className="flex justify-end">
-                  <a
-                    href="/?view=forgot"
-                    className="text-xs font-semibold text-emerald-400 hover:text-emerald-350 transition outline-none mt-1"
-                  >
-                    Forgot password?
-                  </a>
-                </div>
-              </div>
-            </div>
-            {loginError ? (
-              <p className="text-sm text-warning">{loginError}</p>
-            ) : null}
-            <Button
-              type="submit"
-              className="w-full"
-              isLoading={loginSubmitting}
-            >
-              Sign in
-            </Button>
-          </form>
-        </Card>
-      </main>
-    );
-  }
+  if (!user) return null;
 
   return (
     <PageShell
@@ -348,20 +256,20 @@ export default function BookingsPage() {
                       <div
                         key={b.id}
                         style={pos}
-                        className="absolute left-4 right-4 flex flex-col justify-between rounded-lg border border-primary/30 bg-primary/10 p-3"
+                        className="absolute left-4 right-4 flex flex-col justify-between rounded-[1.5rem] border border-mathical-purple/30 bg-mathical-purple/20 p-3 shadow-md"
                       >
                         <div>
-                          <p className="text-xs font-semibold text-primary-light">
+                          <p className="text-xs font-bold text-white">
                             Booked — {b.booked_by_name}
                           </p>
-                          <p className="mt-0.5 text-[10px] text-text-secondary">
+                          <p className="mt-0.5 text-[10px] text-stone-300 font-semibold">
                             {sTime} to {eTime}
                           </p>
                         </div>
                         {canCancel && (
                           <button
                             onClick={() => handleCancel(b.id)}
-                            className="self-end text-[10px] font-medium text-warning hover:text-warning-light"
+                            className="self-end text-[10px] font-extrabold uppercase tracking-widest text-mathical-pink hover:opacity-90"
                           >
                             Cancel
                           </button>
@@ -377,20 +285,19 @@ export default function BookingsPage() {
                       return bookingConflict ? (
                         <div
                           style={pos}
-                          className="absolute left-4 right-4 flex items-center justify-center rounded-lg border border-dashed border-warning bg-warning/10 p-3 text-center"
+                          className="absolute left-4 right-4 flex items-center justify-center rounded-[1.5rem] border border-dashed border-mathical-pink bg-mathical-pink/10 p-3 text-center shadow-lg"
                         >
-                          <p className="text-xs font-medium text-warning-light">
+                          <p className="text-xs font-bold text-mathical-pink">
                             {bookingConflict}
                           </p>
                         </div>
                       ) : (
                         <div
                           style={pos}
-                          className="absolute left-4 right-4 flex items-center justify-center rounded-lg border border-dashed border-success bg-success/10 p-3 text-center"
+                          className="absolute left-4 right-4 flex items-center justify-center rounded-[1.5rem] border border-dashed border-mathical-lime bg-mathical-lime/10 p-3 text-center shadow-lg"
                         >
-                          <p className="text-xs font-medium text-success">
-                            Requested {startTime} to {endTime} — Slot is
-                            Available!
+                          <p className="text-xs font-bold text-mathical-lime">
+                            Requested {startTime} to {endTime} — Slot is Available!
                           </p>
                         </div>
                       );
@@ -399,7 +306,7 @@ export default function BookingsPage() {
 
                   {dailyBookings.length === 0 && !startTime && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <p className="text-sm text-text-muted">
+                      <p className="text-sm text-stone-500 font-bold">
                         No bookings scheduled for this date.
                       </p>
                     </div>

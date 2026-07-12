@@ -10,23 +10,23 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", isLoading, children, disabled, ...props }, ref) => {
     const base =
-      "inline-flex items-center justify-center rounded-lg font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg-app disabled:opacity-50 disabled:cursor-not-allowed";
+      "inline-flex items-center justify-center rounded-full font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mathical-purple focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed select-none";
 
     const variants = {
       primary:
-        "bg-primary text-primary-inverse hover:bg-primary-light active:bg-primary-dark",
+        "bg-mathical-purple text-white hover:opacity-90 shadow-[0_4px_14px_rgba(76,81,230,0.3)]",
       secondary:
-        "border border-border bg-bg-elevated text-text-primary hover:border-primary/50 hover:bg-bg-input",
+        "border border-white/10 bg-[#121312] text-stone-200 hover:bg-stone-900",
       danger:
-        "bg-warning/10 text-warning border border-warning/30 hover:bg-warning/20",
+        "bg-mathical-pink text-black hover:opacity-90",
       ghost:
-        "text-text-secondary hover:text-text-primary hover:bg-bg-elevated",
+        "text-text-muted hover:text-white hover:bg-stone-900",
     };
 
     const sizes = {
-      sm: "h-8 px-3 text-xs",
-      md: "h-10 px-4 text-sm",
-      lg: "h-11 px-5 text-sm",
+      sm: "h-8 px-4 text-xs",
+      md: "h-10 px-5 text-sm",
+      lg: "h-11 px-6 text-sm",
     };
 
     return (
