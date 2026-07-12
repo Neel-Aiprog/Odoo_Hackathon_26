@@ -79,12 +79,11 @@ export default function ReportsPage() {
   const maxMaintCount = data?.maintenance_frequency.reduce((max, item) => Math.max(max, item.count), 1) ?? 1;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(48,82,62,0.35),_transparent_34%),linear-gradient(180deg,_#0f1110_0%,_#111412_100%)] px-4 py-6 text-stone-100 sm:px-6 lg:px-8">
-      <section className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-[1180px] overflow-hidden rounded-[2rem] border border-stone-200/60 bg-[#141714] shadow-[0_28px_90px_rgba(0,0,0,0.45)]">
-        <Sidebar currentItem="Reports" />
+    <main className="flex min-h-screen bg-[#0f1110] text-stone-100 selection:bg-emerald-400/30 selection:text-emerald-300">
+      <Sidebar currentItem="Reports" />
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="border-b border-stone-200/10 px-5 py-5 sm:px-6 lg:px-7">
+      <section className="flex-1 px-8 py-8 lg:px-12 lg:py-10 flex flex-col overflow-y-auto">
+        <header className="border-b border-stone-200/10 pb-5">
             <h1 className="text-3xl font-semibold tracking-tight text-stone-50">Reports &amp; Analytics</h1>
             <p className="mt-1 text-sm text-stone-400">
               Actionable operational insights, trends, utilization metrics and lifecycle alerts.
@@ -261,8 +260,7 @@ export default function ReportsPage() {
               </>
             )}
           </div>
-        </div>
-      </section>
-    </main>
-  );
-}
+        </section>
+      </main>
+    );
+  }

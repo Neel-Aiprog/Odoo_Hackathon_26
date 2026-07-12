@@ -96,3 +96,18 @@ textarea,
 button {
   font-family: inherit;
 }
+
+a,
+button,
+[role="button"],
+select,
+option,
+label,
+summary,
+input[type="submit"],
+input[type="button"],
+input[type="checkbox"],
+input[type="radio"],
+.cursor-pointer {
+  cursor: pointer;
+}

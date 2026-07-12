@@ -55,6 +55,13 @@ class EmployeeResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class EmployeeCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    email: EmailStr
+    password: str = Field(..., min_length=6, max_length=255)
+    role: str = Field("employee", pattern="^(employee|department_head|asset_manager|admin)$")
+    department_id: Optional[int] = None
+
 class EmployeeRoleUpdate(BaseModel):
     role: str = Field(..., pattern="^(employee|department_head|asset_manager|admin)$")
 
@@ -204,8 +211,18 @@ def get_employees(
     current_user: Employee = Depends(get_current_user),
 ):
     employees = db.query(Employee).all()
+    role_priority = {
+        "admin": 1,
+        "asset_manager": 2,
+        "department_head": 3,
+        "employee": 4
+    }
+    sorted_employees = sorted(
+        employees,
+        key=lambda e: (role_priority.get(e.role, 99), e.name.lower() if e.name else "")
+    )
     response = []
-    for emp in employees:
+    for emp in sorted_employees:
         dept_name = db.get(Department, emp.department_id).name if emp.department_id else None
         response.append({
             "id": emp.id, "name": emp.name, "email": emp.email, "department_id": emp.department_id,
@@ -253,3 +270,40 @@ def update_employee_status(
         "id": emp.id, "name": emp.name, "email": emp.email, "department_id": emp.department_id,
         "department_name": dept_name, "role": emp.role, "status": emp.status, "created_at": emp.created_at.isoformat()
     }
+
+@router.post("/employees", response_model=EmployeeResponse)
+def create_employee(
+    data: EmployeeCreate,
+    db: Session = Depends(get_db),
+    admin: Employee = Depends(require_role("admin")),
+):
+    # Check if email is already taken
+    existing = db.query(Employee).filter(Employee.email == data.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email is already registered.")
+        
+    from security import hash_password
+    pwd_hash = hash_password(data.password)
+    
+    new_emp = Employee(
+        name=data.name,
+        email=data.email,
+        password_hash=pwd_hash,
+        role=data.role,
+        department_id=data.department_id,
+        status="active"
+    )
+    
+    try:
+        db.add(new_emp)
+        db.commit()
+        db.refresh(new_emp)
+        log_activity(db, admin.id, "CREATE_EMPLOYEE", {"id": new_emp.id, "name": new_emp.name, "email": new_emp.email})
+        dept_name = db.get(Department, new_emp.department_id).name if new_emp.department_id else None
+        return {
+            "id": new_emp.id, "name": new_emp.name, "email": new_emp.email, "department_id": new_emp.department_id,
+            "department_name": dept_name, "role": new_emp.role, "status": new_emp.status, "created_at": new_emp.created_at.isoformat()
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create employee: {str(e)}")

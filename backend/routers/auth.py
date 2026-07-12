@@ -37,7 +37,7 @@ def login(data: LoginRequest, response: Response, db: Session = Depends(get_db))
         raise HTTPException(status_code=403, detail="User account is deactivated")
 
     token = create_access_token({"user_id": user.id, "role": user.role})
-    response.set_cookie("token", token, httponly=True, samesite="lax")
+    response.set_cookie("token", token, httponly=False, samesite="lax")
     return {"user": EmployeeOut.model_validate(user)}
 
 @router.post("/forgot-password")
@@ -66,6 +66,25 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
     user.reset_token_expires = None
     db.commit()
     return {"message": "Password updated successfully"}
+
+from pydantic import BaseModel, Field
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6, max_length=255)
+
+@router.post("/change-password")
+def change_password(
+    data: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user)
+):
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+    
+    current_user.password_hash = hash_password(data.new_password)
+    db.commit()
+    return {"message": "Password changed successfully"}
 
 @router.get("/me", response_model=EmployeeOut)
 def me(current_user: Employee = Depends(get_current_user)):

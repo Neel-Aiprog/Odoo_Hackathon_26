@@ -157,6 +157,32 @@ export async function logout() {
   });
 }
 
+export type ChangePasswordPayload = {
+  current_password: string;
+  new_password: string;
+};
+
+export async function changePassword(payload: ChangePasswordPayload) {
+  return apiFetch<{ message: string }>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function forgotPassword(email: string) {
+  return apiFetch<{ message: string }>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  return apiFetch<{ message: string }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
+}
+
 export type Kpis = {
   assets_available: number;
   assets_allocated: number;
@@ -294,6 +320,21 @@ export async function createDepartment(payload: DepartmentCreatePayload) {
 
 export async function createCategory(payload: CategoryCreatePayload) {
   return apiFetch<Category>("/api/categories", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export type EmployeeCreatePayload = {
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+  department_id?: number | null;
+};
+
+export async function createEmployee(payload: EmployeeCreatePayload) {
+  return apiFetch<Employee>("/api/employees", {
     method: "POST",
     body: JSON.stringify(payload),
   });

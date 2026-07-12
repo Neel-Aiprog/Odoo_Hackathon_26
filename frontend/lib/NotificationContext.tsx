@@ -21,6 +21,14 @@ type NotificationContextType = {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift() ?? null;
+  return null;
+}
+
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -71,7 +79,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     // Determine WS URL
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
     const wsProto = apiBase.startsWith("https") ? "wss" : "ws";
-    const wsUrl = `${apiBase.replace(/^https?/, wsProto)}/api/ws/notifications`;
+    const token = getCookie("token");
+    const wsUrl = `${apiBase.replace(/^https?/, wsProto)}/api/ws/notifications${token ? `?token=${encodeURIComponent(token)}` : ""}`;
 
     let socket: WebSocket | null = null;
     let reconnectTimeout: NodeJS.Timeout;

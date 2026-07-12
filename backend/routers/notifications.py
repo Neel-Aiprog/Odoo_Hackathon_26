@@ -60,7 +60,7 @@ async def capture_loop():
 
 
 async def get_websocket_user(websocket: WebSocket, db: Session) -> Employee:
-    token = websocket.cookies.get("token")
+    token = websocket.query_params.get("token") or websocket.cookies.get("token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 

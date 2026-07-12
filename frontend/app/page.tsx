@@ -8,6 +8,8 @@ import {
   getOverdueAllocations,
   getMe,
   login,
+  forgotPassword,
+  resetPassword,
   type User,
   type Kpis,
   type OverdueAllocation,
@@ -44,6 +46,72 @@ export default function Home() {
   const [overdue, setOverdue] = useState<OverdueAllocation[]>([]);
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+  // Forgot/Reset Password states
+  const [loginView, setLoginView] = useState<"signin" | "forgot" | "reset">("signin");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+
+  const [resetToken, setResetToken] = useState("");
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [resetSuccess, setResetSuccess] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+
+  async function handleForgotPassword(e: FormEvent) {
+    e.preventDefault();
+    setForgotSubmitting(true);
+    setForgotError("");
+    setForgotSuccess("");
+    try {
+      const res = await forgotPassword(forgotEmail);
+      setForgotSuccess(res.message || "A reset link was generated! Check the backend console output.");
+      setTimeout(() => {
+        setLoginView("reset");
+      }, 2500);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setForgotError(error.message || "Failed to submit request.");
+    } finally {
+      setForgotSubmitting(false);
+    }
+  }
+
+  async function handleResetPassword(e: FormEvent) {
+    e.preventDefault();
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetError("Passwords do not match");
+      return;
+    }
+    if (resetNewPassword.length < 6) {
+      setResetError("Password must be at least 6 characters");
+      return;
+    }
+    setResetSubmitting(true);
+    setResetError("");
+    setResetSuccess("");
+    try {
+      await resetPassword(resetToken, resetNewPassword);
+      setResetSuccess("Password reset successfully! Redirecting to login...");
+      setTimeout(() => {
+        setLoginView("signin");
+        setResetToken("");
+        setResetNewPassword("");
+        setResetConfirmPassword("");
+        setResetSuccess("");
+      }, 2000);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setResetError(error.message || "Failed to reset password.");
+    } finally {
+      setResetSubmitting(false);
+    }
+  }
+
+
 
   const loadDashboardData = useCallback(async () => {
     setLoadingDashboard(true);
