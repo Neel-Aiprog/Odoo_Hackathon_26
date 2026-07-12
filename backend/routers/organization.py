@@ -197,11 +197,11 @@ def update_category(
         raise HTTPException(status_code=400, detail="Category name already exists.")
 
 
-# ---- Employee Directory (Admin only — this is the fix) ----
+# ---- Employee Directory (Authenticated users can read, admin updates) ----
 @router.get("/employees", response_model=List[EmployeeResponse])
 def get_employees(
     db: Session = Depends(get_db),
-    admin: Employee = Depends(require_role("admin")),
+    current_user: Employee = Depends(get_current_user),
 ):
     employees = db.query(Employee).all()
     response = []
