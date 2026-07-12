@@ -11,6 +11,7 @@ import {
   getCategories,
   getMe,
   login,
+  getAssetQrUrl,
   type Asset,
   type AssetDetail,
   type Category,
@@ -97,6 +98,85 @@ export default function AssetsPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [form, setForm] = useState<AssetFormState>({ ...defaultForm });
   const [submitting, setSubmitting] = useState(false);
+
+  const canRegister = user?.role === "admin" || user?.role === "asset_manager";
+
+  function handlePrintLabel(asset: AssetDetail) {
+    const printWindow = window.open("", "_blank", "width=600,height=600");
+    if (!printWindow) {
+      alert("Please allow popups to print asset labels.");
+      return;
+    }
+    const qrUrl = getAssetQrUrl(asset.id);
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print Label - ${asset.asset_tag}</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              margin: 0;
+              padding: 20px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              text-align: center;
+            }
+            .label-card {
+              border: 2px dashed #000;
+              padding: 20px;
+              border-radius: 12px;
+              max-width: 280px;
+              background: #fff;
+            }
+            .title {
+              font-size: 20px;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .tag {
+              font-size: 16px;
+              color: #4b5563;
+              margin-bottom: 15px;
+              font-family: monospace;
+              font-weight: bold;
+            }
+            .qr-img {
+              width: 180px;
+              height: 180px;
+              object-fit: contain;
+            }
+            .footer {
+              font-size: 10px;
+              color: #9ca3af;
+              margin-top: 15px;
+            }
+            @media print {
+              body { padding: 0; }
+              .label-card { border: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="label-card">
+            <div class="title">${asset.name}</div>
+            <div class="tag">${asset.asset_tag}</div>
+            <img class="qr-img" src="${qrUrl}" alt="QR" />
+            <div class="footer">Property of AssetFlow Registry</div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
 
   const loadAssets = useCallback(async () => {
     setLoadingAssets(true);
@@ -236,25 +316,31 @@ export default function AssetsPage() {
 
   if (authLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#111412] text-stone-300">
-        Loading AssetFlow...
+      <main className="flex min-h-screen items-center justify-center bg-bg-app text-text-secondary">
+        Loading AssetFlow…
       </main>
     );
   }
 
   if (!user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(48,82,62,0.35),_transparent_34%),linear-gradient(180deg,_#0f1110_0%,_#111412_100%)] px-4 py-6 text-stone-100">
-        <section className="w-full max-w-md rounded-[2rem] border border-stone-200/15 bg-[#141714] p-8 shadow-[0_28px_90px_rgba(0,0,0,0.45)]">
-          <p className="font-heading text-3xl font-extrabold tracking-tighter text-[#f46cc3] lowercase mb-2">assetflow</p>
-          <h1 className="mt-2 text-3xl font-semibold text-stone-50">Sign in to continue</h1>
-          <p className="mt-2 text-sm text-stone-400">
-            Use <span className="text-stone-200">mark@assetflow.com</span> /{" "}
-            <span className="text-stone-200">password123</span>.
+      <main className="flex min-h-screen items-center justify-center bg-bg-app px-4 py-6">
+        <Card className="w-full max-w-md">
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary-light">
+            AssetFlow
+          </p>
+          <h1 className="font-heading mt-2 text-2xl font-semibold text-text-primary">
+            Sign in to continue
+          </h1>
+          <p className="mt-2 text-sm text-text-secondary">
+            Use <span className="text-text-primary">mark@assetflow.com</span> /{" "}
+            <span className="text-text-primary">password123</span>.
           </p>
           <form onSubmit={handleLogin} className="mt-6 space-y-4">
-            <Field label="Email" error={loginError ?? undefined}>
-              <input
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
                 type="email"
                 value={loginEmail}
                 onChange={(event) => setLoginEmail(event.target.value)}
@@ -295,69 +381,390 @@ export default function AssetsPage() {
   return (
     <PageShell
       currentItem="Assets"
-      title="Asset Directory"
-      subtitle="Register assets with auto-generated tags, search, and track allocation/maintenance history."
+      title="Asset registrations and directory"
+      subtitle="Register assets with auto-generated tags, search by tag or serial number, and track lifecycle status with allocation and maintenance history."
+      actions={
+        <Button onClick={() => document.getElementById("register-form")?.scrollIntoView({ behavior: "smooth" })}>
+          Register Asset
+        </Button>
+      }
     >
-      <div className="flex-1 min-h-screen bg-[#0f1110] text-stone-100 selection:bg-emerald-400/30 selection:text-emerald-300">
-        <section className="flex-1 px-8 py-8 lg:px-12 lg:py-10 flex flex-col overflow-y-auto">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-200/10 pb-6 mb-6">
-            <div>
-              <h1 className="text-3xl font-semibold text-stone-50 tracking-tight">Asset Directory</h1>
-              <p className="text-sm text-stone-400 mt-1">Register assets with auto-generated tags, search, and track allocation/maintenance history.</p>
-            </div>
-            {canRegister && (
-              <a
-                href="#register-form"
-                className="h-11 px-6 rounded-2xl bg-emerald-300 text-sm font-semibold text-emerald-950 hover:bg-emerald-200 transition flex items-center justify-center shrink-0"
+      {assetsError ? (
+        <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning-light">
+          {assetsError}
+        </div>
+      ) : null}
+
+      <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="space-y-5">
+          <Card>
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by tag, name, or serial number…"
+                  className="pl-9"
+                />
+              </div>
+              <Select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
               >
-                Register Asset
-              </a>
-            )}
-          </div>
-
-          {assetsError && (
-            <div className="mb-6 rounded-2xl border border-rose-350/20 bg-rose-950/20 px-4 py-3 text-sm text-rose-200">
-              {assetsError}
+                <option value="all">All categories</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={String(category.id)}>
+                    {category.name}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All statuses</option>
+                {STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {formatStatus(status)}
+                  </option>
+                ))}
+              </Select>
+              <Input
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                placeholder="Filter by location…"
+              />
             </div>
-          )}
+          </Card>
 
-          <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] items-start">
-            {/* Left side list */}
-            <div className="space-y-6">
-              {/* Search & filters */}
-              <div className="rounded-[1.75rem] border border-stone-200/10 bg-[#161916] p-5">
-                <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-                    <input
-                      type="text"
-                      placeholder="Search tag or serial number..."
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      className="h-10 pl-9 pr-4 w-full rounded-xl border border-stone-200/10 bg-stone-950/45 text-sm text-stone-100 outline-none focus:border-emerald-350/50"
+          <Card className="overflow-hidden p-0">
+            <div className="grid grid-cols-[120px_1.1fr_0.95fr_0.9fr_0.95fr] gap-4 border-b border-border-subtle bg-bg-elevated px-5 py-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
+              <span>Tag</span>
+              <span>Name</span>
+              <span>Category</span>
+              <span>Status</span>
+              <span>Location</span>
+            </div>
+            <div className="divide-y divide-border-subtle">
+              {loadingAssets ? (
+                <div className="space-y-2 px-5 py-6">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-8" />
+                  ))}
+                </div>
+              ) : assets.length === 0 ? (
+                <div className="px-5 py-8 text-sm text-text-muted">
+                  No assets match the current search and filter set.
+                </div>
+              ) : (
+                assets.map((asset) => (
+                  <button
+                    key={asset.id}
+                    type="button"
+                    onClick={() => void handleSelectAsset(asset)}
+                    className={`grid w-full grid-cols-[120px_1.1fr_0.95fr_0.9fr_0.95fr] gap-4 px-5 py-3 text-left text-sm transition hover:bg-bg-elevated/50 ${
+                      selectedAsset?.id === asset.id ? "bg-primary/5" : ""
+                    }`}
+                  >
+                    <span className="font-medium text-text-primary">
+                      {asset.asset_tag}
+                    </span>
+                    <span className="text-text-secondary">{asset.name}</span>
+                    <span className="text-text-muted">
+                      {asset.category_name ?? "—"}
+                    </span>
+                    <span className="text-text-muted">
+                      {formatStatus(asset.status)}
+                    </span>
+                    <span className="text-text-muted">{asset.location}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </Card>
+
+          {selectedAsset ? (
+            <div className="grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
+              <Card>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-text-muted">
+                      Selected asset
+                    </p>
+                    <h2 className="font-heading mt-1 text-xl font-semibold text-text-primary">
+                      {selectedAsset.name}
+                    </h2>
+                  </div>
+                  <Badge variant="primary">{formatStatus(selectedAsset.status)}</Badge>
+                </div>
+
+                <div className="mt-5 grid gap-3 text-sm text-text-secondary sm:grid-cols-2">
+                  <InfoPill
+                    icon={Tag}
+                    label="Asset tag"
+                    value={selectedAsset.asset_tag}
+                  />
+                  <InfoPill
+                    label="Serial number"
+                    value={selectedAsset.serial_number ?? "—"}
+                  />
+                  <InfoPill
+                    label="Category"
+                    value={selectedAsset.category_name ?? "—"}
+                  />
+                  <InfoPill
+                    label="Condition"
+                    value={formatStatus(selectedAsset.condition)}
+                  />
+                  <InfoPill
+                    icon={MapPin}
+                    label="Location"
+                    value={selectedAsset.location}
+                  />
+                  <InfoPill
+                    icon={Share2}
+                    label="Shared/bookable"
+                    value={selectedAsset.is_shared ? "Yes" : "No"}
+                  />
+                  <InfoPill
+                    icon={Banknote}
+                    label="Acquisition cost"
+                    value={`₹${selectedAsset.acquisition_cost.toLocaleString(
+                      "en-IN",
+                    )}`}
+                  />
+                  <InfoPill
+                    icon={Calendar}
+                    label="Acquired on"
+                    value={selectedAsset.acquisition_date}
+                  />
+                </div>
+
+                <div className="mt-6 pt-5 border-t border-border-subtle flex flex-col sm:flex-row items-center gap-5">
+                  <div className="bg-white p-2.5 rounded-2xl w-24 h-24 flex items-center justify-center shrink-0 border border-border-subtle">
+                    <img
+                      src={getAssetQrUrl(selectedAsset.id)}
+                      alt="Asset QR Code"
+                      className="w-full h-full object-contain"
                     />
                   </div>
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="h-10 px-3 rounded-xl border border-stone-200/10 bg-stone-950/45 text-sm text-stone-100 outline-none focus:border-emerald-350/50"
+                  <div className="text-center sm:text-left">
+                    <h4 className="text-sm font-semibold text-text-primary">Asset QR Label</h4>
+                    <p className="text-xs text-text-secondary mt-1 max-w-xs">
+                      Scan this code during physical audits or quick check-ins.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handlePrintLabel(selectedAsset)}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 px-3.5 py-1.5 text-xs font-semibold text-primary-light transition"
+                    >
+                      Print Label
+                    </button>
+                  </div>
+                </div>
+              </Card>
+
+              <Card>
+                <h3 className="font-heading text-lg font-semibold text-text-primary">
+                  Lifecycle history
+                </h3>
+                <div className="mt-4 space-y-4 text-sm text-text-secondary">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                      Allocation history
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {selectedAsset.allocation_history.length > 0 ? (
+                        selectedAsset.allocation_history.map((item) => (
+                          <li
+                            key={item.id}
+                            className="rounded-lg border border-border-subtle bg-bg-elevated/50 px-3 py-2"
+                          >
+                            {item.target ?? "Unknown"} ·{" "}
+                            {formatStatus(item.status)} ·{" "}
+                            {new Date(item.allocation_date).toLocaleDateString()}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="text-text-muted">No allocations yet.</li>
+                      )}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                      Maintenance history
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {selectedAsset.maintenance_history.length > 0 ? (
+                        selectedAsset.maintenance_history.map((item) => (
+                          <li
+                            key={item.id}
+                            className="rounded-lg border border-border-subtle bg-bg-elevated/50 px-3 py-2"
+                          >
+                            {item.description} · {formatStatus(item.status)} ·{" "}
+                            {new Date(item.created_at).toLocaleDateString()}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="text-text-muted">
+                          No maintenance logged yet.
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                  {(selectedAsset.photo_url || selectedAsset.document_url) && (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                        Attachments
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {selectedAsset.photo_url ? (
+                          <li className="rounded-lg border border-border-subtle bg-bg-elevated/50 px-3 py-2">
+                            Photo: {selectedAsset.photo_url}
+                          </li>
+                        ) : null}
+                        {selectedAsset.document_url ? (
+                          <li className="rounded-lg border border-border-subtle bg-bg-elevated/50 px-3 py-2">
+                            Document: {selectedAsset.document_url}
+                          </li>
+                        ) : null}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          ) : null}
+        </div>
+
+        <aside className="space-y-5">
+          <div id="register-form">
+            <Card>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-text-muted">
+                  Registration form
+                </p>
+                <h2 className="font-heading mt-1 text-xl font-semibold text-text-primary">
+                  Register asset
+                </h2>
+              </div>
+              <Badge variant="muted">Tag auto-generated</Badge>
+            </div>
+
+            {!canRegister ? (
+              <p className="mt-5 text-sm text-text-secondary">
+                Only admins and asset managers can register new assets.
+              </p>
+            ) : (
+              <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+                <Field label="Name" error={errors.name}>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => updateField("name", e.target.value)}
+                  />
+                </Field>
+
+                <Field label="Category" error={errors.categoryId}>
+                  <Select
+                    value={form.categoryId || ""}
+                    onChange={(e) =>
+                      updateField("categoryId", Number(e.target.value))
+                    }
                   >
-                    <option value="all">All Categories</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
                     ))}
-                  </select>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="h-10 px-3 rounded-xl border border-stone-200/10 bg-stone-950/45 text-sm text-stone-100 outline-none focus:border-emerald-350/50"
+                  </Select>
+                </Field>
+
+                <Field label="Serial number" error={errors.serialNumber}>
+                  <Input
+                    value={form.serialNumber}
+                    onChange={(e) =>
+                      updateField("serialNumber", e.target.value)
+                    }
+                  />
+                </Field>
+
+                <Field label="Acquisition date" error={errors.acquisitionDate}>
+                  <Input
+                    type="date"
+                    value={form.acquisitionDate}
+                    onChange={(e) =>
+                      updateField("acquisitionDate", e.target.value)
+                    }
+                  />
+                </Field>
+
+                <Field label="Acquisition cost" error={errors.acquisitionCost}>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={form.acquisitionCost}
+                    onChange={(e) =>
+                      updateField("acquisitionCost", Number(e.target.value))
+                    }
+                  />
+                </Field>
+
+                <Field label="Condition" error={errors.condition}>
+                  <Select
+                    value={form.condition}
+                    onChange={(e) =>
+                      updateField(
+                        "condition",
+                        e.target.value as AssetFormState["condition"],
+                      )
+                    }
                   >
-                    <option value="all">All Statuses</option>
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>{formatStatus(s)}</option>
+                    {CONDITIONS.map((condition) => (
+                      <option key={condition} value={condition}>
+                        {formatStatus(condition)}
+                      </option>
                     ))}
-                  </select>
+                  </Select>
+                </Field>
+
+                <Field label="Location" error={errors.location}>
+                  <Input
+                    list="location-options"
+                    value={form.location}
+                    onChange={(e) => updateField("location", e.target.value)}
+                  />
+                  <datalist id="location-options">
+                    {locationOptions.map((location) => (
+                      <option key={location} value={location} />
+                    ))}
+                  </datalist>
+                </Field>
+
+                <Field label="Photo URL (optional)" error={errors.photoUrl}>
+                  <Input
+                    value={form.photoUrl}
+                    onChange={(e) => updateField("photoUrl", e.target.value)}
+                    placeholder="https://..."
+                  />
+                </Field>
+
+                <Field
+                  label="Document URL (optional)"
+                  error={errors.documentUrl}
+                >
+                  <Input
+                    value={form.documentUrl}
+                    onChange={(e) =>
+                      updateField("documentUrl", e.target.value)
+                    }
+                    placeholder="https://..."
+                  />
+                </Field>
+
+                <label className="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-elevated/50 px-4 py-3 text-sm text-text-secondary">
+                  <span>Shared/bookable</span>
                   <input
                     list="location-options-filter"
                     placeholder="All locations..."
@@ -365,204 +772,54 @@ export default function AssetsPage() {
                     onChange={(e) => setLocationFilter(e.target.value)}
                     className="h-10 px-3 rounded-xl border border-stone-200/10 bg-stone-950/45 text-sm text-stone-100 outline-none focus:border-emerald-350/50"
                   />
-                  <datalist id="location-options-filter">
-                    {locationOptions.map((loc) => (
-                      <option key={loc} value={loc} />
-                    ))}
-                  </datalist>
-                </div>
-              </div>
+                </label>
 
-              {/* Assets list table card */}
-              <div className="rounded-[1.75rem] border border-stone-200/10 bg-[#161916] overflow-hidden">
-                <div className="grid grid-cols-[120px_1.1fr_0.95fr_0.9fr_0.95fr] gap-4 border-b border-stone-200/10 px-5 py-4 text-xs font-semibold uppercase tracking-wider text-stone-400 bg-stone-950/20">
-                  <span>Asset tag</span>
-                  <span>Name</span>
-                  <span>Category</span>
-                  <span>Status</span>
-                  <span>Location</span>
-                </div>
-                <div className="divide-y divide-stone-200/5">
-                  {loadingAssets ? (
-                    <div className="p-5 text-sm text-stone-400">Loading asset records...</div>
-                  ) : assets.length > 0 ? (
-                    assets.map((asset) => (
-                      <button
-                        key={asset.id}
-                        type="button"
-                        onClick={() => void handleSelectAsset(asset)}
-                        className={`grid w-full grid-cols-[120px_1.1fr_0.95fr_0.9fr_0.95fr] gap-4 px-5 py-4 text-left text-sm transition hover:bg-stone-100/5 ${selectedAsset?.id === asset.id ? "bg-emerald-355/5" : ""}`}
-                      >
-                        <span className="font-semibold text-stone-100">{asset.asset_tag}</span>
-                        <span className="text-stone-200">{asset.name}</span>
-                        <span className="text-stone-300">{asset.category_name ?? "—"}</span>
-                        <span className="text-stone-300">{formatStatus(asset.status)}</span>
-                        <span className="text-stone-300">{asset.location}</span>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="p-5 text-sm text-stone-400">No assets found matching the filter criteria.</div>
-                  )}
-                </div>
-              </div>
+                {errors.submit ? (
+                  <p className="text-sm text-warning-light">{errors.submit}</p>
+                ) : null}
 
-              {/* Selected Asset details view nested in left side */}
-              {selectedAsset ? (
-                <div className="mt-5 grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
-                  <article className="rounded-[1.5rem] border border-stone-200/10 bg-[#161916] p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm text-stone-400">Selected asset</p>
-                        <h2 className="mt-1 text-2xl font-semibold text-stone-50">
-                          {selectedAsset.name}
-                        </h2>
-                      </div>
-                      <span className="rounded-full border border-emerald-300/35 bg-emerald-300/10 px-3 py-1 text-xs font-medium text-emerald-100">
-                        {formatStatus(selectedAsset.status)}
-                      </span>
-                    </div>
-
-                    <div className="mt-5 grid gap-3 text-sm text-stone-300 sm:grid-cols-2">
-                      <InfoPill label="Asset tag" value={selectedAsset.asset_tag} />
-                      <InfoPill label="Serial number" value={selectedAsset.serial_number ?? "—"} />
-                      <InfoPill label="Category" value={selectedAsset.category_name ?? "—"} />
-                      <InfoPill label="Condition" value={formatStatus(selectedAsset.condition)} />
-                      <InfoPill label="Location" value={selectedAsset.location} />
-                      <InfoPill label="Shared/bookable" value={selectedAsset.is_shared ? "Yes" : "No"} />
-                      <InfoPill label="Acquisition cost" value={`₹${selectedAsset.acquisition_cost.toLocaleString("en-IN")}`} />
-                      <InfoPill label="Acquired on" value={selectedAsset.acquisition_date} />
-                    </div>
-                  </article>
-
-                  <article className="rounded-[1.5rem] border border-stone-200/10 bg-[#161916] p-5">
-                    <h3 className="text-lg font-semibold text-stone-50">Lifecycle history</h3>
-                    <div className="mt-4 space-y-4 text-sm text-stone-300">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Allocation history</p>
-                        <ul className="mt-2 space-y-2">
-                          {selectedAsset.allocation_history.length > 0 ? (
-                            selectedAsset.allocation_history.map((item) => (
-                              <li key={item.id} className="rounded-2xl border border-stone-200/10 bg-stone-950/35 px-3 py-2">
-                                {item.target ?? "Unknown"} · {formatStatus(item.status)} · {new Date(item.allocation_date).toLocaleDateString()}
-                              </li>
-                            ))
-                          ) : (
-                            <li className="rounded-2xl border border-stone-200/10 bg-stone-950/35 px-3 py-2 text-stone-500">No allocations yet.</li>
-                          )}
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Maintenance history</p>
-                        <ul className="mt-2 space-y-2">
-                          {selectedAsset.maintenance_history.length > 0 ? (
-                            selectedAsset.maintenance_history.map((item) => (
-                              <li key={item.id} className="rounded-2xl border border-stone-200/10 bg-stone-950/35 px-3 py-2">
-                                {item.description} · {formatStatus(item.status)} · {new Date(item.created_at).toLocaleDateString()}
-                              </li>
-                            ))
-                          ) : (
-                            <li className="rounded-2xl border border-stone-200/10 bg-stone-950/35 px-3 py-2 text-stone-500">No maintenance logged yet.</li>
-                          )}
-                        </ul>
-                      </div>
-                      {(selectedAsset.photo_url || selectedAsset.document_url) && (
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-stone-500">Attachments</p>
-                          <ul className="mt-2 space-y-2">
-                            {selectedAsset.photo_url && (
-                              <li className="rounded-2xl border border-stone-200/10 bg-stone-950/35 px-3 py-2">Photo: {selectedAsset.photo_url}</li>
-                            )}
-                            {selectedAsset.document_url && (
-                              <li className="rounded-2xl border border-stone-200/10 bg-stone-950/35 px-3 py-2">Document: {selectedAsset.document_url}</li>
-                            )}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </article>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Right side form / sidebars */}
-            <aside className="space-y-5">
-              {canRegister && (
-                <section id="register-form" className="rounded-[1.75rem] border border-stone-200/10 bg-stone-950/20 p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm text-stone-400">Registration form</p>
-                      <h2 className="mt-1 text-2xl font-semibold text-stone-50">Register asset</h2>
-                    </div>
-                    <span className="rounded-full border border-stone-200/15 bg-stone-950/35 px-3 py-1 text-xs text-stone-300">Tag auto-generated</span>
-                  </div>
-
-                  <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-                    <Field label="Name" error={errors.name}>
-                      <input value={form.name} onChange={(e) => updateField("name", e.target.value)} className={inputClassName()} />
-                    </Field>
-                    <Field label="Category" error={errors.categoryId}>
-                      <select value={form.categoryId || ""} onChange={(e) => updateField("categoryId", Number(e.target.value))} className={inputClassName()}>
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id} className="bg-stone-950">{c.name}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Serial number" error={errors.serialNumber}>
-                      <input value={form.serialNumber} onChange={(e) => updateField("serialNumber", e.target.value)} className={inputClassName()} />
-                    </Field>
-                    <Field label="Acquisition date" error={errors.acquisitionDate}>
-                      <input type="date" value={form.acquisitionDate} onChange={(e) => updateField("acquisitionDate", e.target.value)} className={inputClassName()} />
-                    </Field>
-                    <Field label="Acquisition cost" error={errors.acquisitionCost}>
-                      <input type="number" min="0" value={form.acquisitionCost} onChange={(e) => updateField("acquisitionCost", Number(e.target.value))} className={inputClassName()} />
-                    </Field>
-                    <Field label="Condition" error={errors.condition}>
-                      <select value={form.condition} onChange={(e) => updateField("condition", e.target.value as any)} className={inputClassName()}>
-                        {CONDITIONS.map((cond) => (
-                          <option key={cond} value={cond} className="bg-stone-950">{formatStatus(cond)}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Location" error={errors.location}>
-                      <input list="location-options-reg" value={form.location} onChange={(e) => updateField("location", e.target.value)} className={inputClassName()} />
-                      <datalist id="location-options-reg">
-                        {locationOptions.map((loc) => (
-                          <option key={loc} value={loc} />
-                        ))}
-                      </datalist>
-                    </Field>
-                    <Field label="Photo URL (optional)" error={errors.photoUrl}>
-                      <input value={form.photoUrl} onChange={(e) => updateField("photoUrl", e.target.value)} className={inputClassName()} />
-                    </Field>
-                    <Field label="Document URL (optional)" error={errors.documentUrl}>
-                      <input value={form.documentUrl} onChange={(e) => updateField("documentUrl", e.target.value)} className={inputClassName()} />
-                    </Field>
-                    <label className="flex items-center justify-between rounded-2xl border border-stone-200/10 bg-stone-950/35 px-4 py-3 text-sm text-stone-200">
-                      <span>Shared/bookable</span>
-                      <input type="checkbox" checked={form.isShared} onChange={(e) => updateField("isShared", e.target.checked)} className="h-4 w-4 accent-emerald-300" />
-                    </label>
-
-                    {errors.submit && <p className="text-sm text-rose-350">{errors.submit}</p>}
-
-                    <button type="submit" disabled={submitting} className="h-11 w-full rounded-2xl bg-emerald-300 px-4 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-200 disabled:opacity-60">
-                      {submitting ? "Registering..." : "Register asset"}
-                    </button>
-                  </form>
-                </section>
-              )}
-
-              <section className="rounded-[1.75rem] border border-stone-200/10 bg-stone-950/20 p-5">
-                <h3 className="text-lg font-semibold text-stone-50">Registry summary</h3>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <SummaryCard label="Total assets" value={assets.length.toString()} />
-                  <SummaryCard label="Available" value={assets.filter((a) => a.status === "available").length.toString()} />
-                  <SummaryCard label="Allocated" value={assets.filter((a) => a.status === "allocated").length.toString()} />
-                  <SummaryCard label="Shared" value={assets.filter((a) => a.is_shared).length.toString()} />
-                </div>
-              </section>
-            </aside>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  isLoading={submitting}
+                >
+                  Register asset
+                </Button>
+              </form>
+            )}
+            </Card>
           </div>
-        </section>
+
+          <Card>
+            <h3 className="font-heading text-lg font-semibold text-text-primary">
+              Registry summary
+            </h3>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <SummaryCard
+                label="Total assets"
+                value={assets.length.toString()}
+              />
+              <SummaryCard
+                label="Available"
+                value={assets
+                  .filter((asset) => asset.status === "available")
+                  .length.toString()}
+              />
+              <SummaryCard
+                label="Allocated"
+                value={assets
+                  .filter((asset) => asset.status === "allocated")
+                  .length.toString()}
+              />
+              <SummaryCard
+                label="Shared"
+                value={assets
+                  .filter((asset) => asset.is_shared)
+                  .length.toString()}
+              />
+            </div>
+          </Card>
+        </aside>
       </div>
     </PageShell>
   );

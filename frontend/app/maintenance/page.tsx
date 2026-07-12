@@ -8,6 +8,8 @@ import {
   updateMaintenanceStatus,
   getAssets,
   login,
+  getMaintenanceCsvUrl,
+  getMaintenancePdfUrl,
   type User,
   type Asset,
   type MaintenanceRequest,
@@ -273,10 +275,28 @@ export default function MaintenancePage() {
       title="Maintenance Management"
       subtitle="Approve repair requests, assign technicians, and track work resolution cards."
       actions={
-        <Button onClick={() => setShowNewModal(true)}>
-          <Wrench className="mr-2 h-4 w-4" />
-          Raise Request
-        </Button>
+        <div className="flex items-center gap-2">
+          <a
+            href={getMaintenancePdfUrl()}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-stone-200/5 hover:bg-stone-200/10 border border-stone-200/10 px-4 text-sm font-semibold text-stone-300 transition"
+          >
+            📄 PDF Report
+          </a>
+          <a
+            href={getMaintenanceCsvUrl()}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-stone-200/5 hover:bg-stone-200/10 border border-stone-200/10 px-4 text-sm font-semibold text-stone-300 transition"
+          >
+            📊 CSV Export
+          </a>
+          <Button onClick={() => setShowNewModal(true)}>
+            <Wrench className="mr-2 h-4 w-4" />
+            Raise Request
+          </Button>
+        </div>
       }
     >
       <div className="flex flex-1 gap-5 overflow-x-auto pb-2">
