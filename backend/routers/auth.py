@@ -70,3 +70,8 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=EmployeeOut)
 def me(current_user: Employee = Depends(get_current_user)):
     return current_user
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie("token", httponly=True, samesite="lax")
+    return {"message": "Logged out successfully"}

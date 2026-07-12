@@ -151,6 +151,12 @@ export async function createAsset(payload: AssetCreatePayload) {
   });
 }
 
+export async function logout() {
+  return apiFetch<{ message: string }>("/auth/logout", {
+    method: "POST",
+  });
+}
+
 export function formatStatus(status: string) {
   return status
     .split("_")
