@@ -2,8 +2,10 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
+env_path = Path(__file__).parent / ".env"
+loaded = load_dotenv(dotenv_path=env_path)
 
 # Resolve absolute path to the backend directory to avoid CWD-dependent SQLite bugs
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
