@@ -1,5 +1,15 @@
 import os
 from datetime import datetime, timedelta
+
+# Monkeypatch bcrypt for passlib compatibility in newer python/bcrypt versions
+import bcrypt
+try:
+    bcrypt.__about__
+except AttributeError:
+    class About:
+        __version__ = bcrypt.__version__
+    bcrypt.__about__ = About
+
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 
