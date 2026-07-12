@@ -86,9 +86,9 @@ export default function BookingsPage() {
       setLoading(false);
     }
   }, [selectedResourceId]);
-
   useEffect(() => {
     if (!user || !selectedResourceId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadBookings();
   }, [user, selectedResourceId, loadBookings]);
 

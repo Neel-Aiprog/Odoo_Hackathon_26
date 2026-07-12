@@ -86,9 +86,9 @@ export default function MaintenancePage() {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     if (!user) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadData();
   }, [user, loadData]);
 

@@ -369,6 +369,19 @@ export async function getActivityLogs() {
   return apiFetch<ActivityLog[]>("/api/activity-logs");
 }
 
+export type ReportsResponse = {
+  utilization_by_department: Array<{ department: string; allocations: number }>;
+  most_used_assets: Array<{ name: string; tag: string; uses: number }>;
+  idle_assets: Array<{ name: string; tag: string; unused_days: number }>;
+  maintenance_retirement: Array<{ name: string; tag: string; reason: string }>;
+  maintenance_frequency: Array<{ category: string; count: number }>;
+};
+
+export async function getReportsData() {
+  return apiFetch<ReportsResponse>("/api/analytics/reports");
+}
+
+
 export async function getNotifications() {
   return apiFetch<NotificationItem[]>("/api/notifications");
 }

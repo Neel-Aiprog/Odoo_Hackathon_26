@@ -1,170 +1,74 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { getMe, getActivityLogs, type ActivityLog, type User, type NotificationItem } from "@/lib/api";
+import { useNotifications } from "@/lib/NotificationContext";
 import { Sidebar } from "../Sidebar";
-import {
-  getActivityLogs,
-  getMe,
-  getNotifications,
-  markNotificationRead,
-  type ActivityLog,
-  type NotificationItem,
-  type User,
-} from "@/lib/api";
 
-const POLL_INTERVAL_MS = 30_000;
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const WS_BASE = API_BASE.replace(/^http/, "ws");
+function timeAgo(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
 
-function inputClassName(extra = "") {
-  return [
-    "h-11 w-full rounded-2xl border border-stone-200/15 bg-stone-950/45 px-4 text-sm text-stone-100 outline-none placeholder:text-stone-500 focus:border-emerald-300/50",
-    extra,
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function typeLabel(type: string) {
-  return type
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function actionLabel(action: string) {
-  return action
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(" ");
-}
-
-function formatNotificationMessage(notification: NotificationItem) {
-  return notification.message;
-}
-
-function formatActivityLog(log: ActivityLog) {
-  const details = log.details as Record<string, unknown> | null;
-  const subject = details?.name ?? details?.asset_name ?? details?.asset_tag ?? details?.title ?? "";
-  return subject ? `${subject} · ${actionLabel(log.action)}` : actionLabel(log.action);
+  if (diffSecs < 60) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
 }
 
 export default function NotificationsPage() {
   const [user, setUser] = useState<User | null>(null);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const { notifications, markAsRead, fetchNotificationsList } = useNotifications();
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [activeTab, setActiveTab] = useState<"all" | "alerts" | "approvals" | "bookings">("all");
   const [loading, setLoading] = useState(true);
-  const [socketStatus, setSocketStatus] = useState<"connecting" | "connected" | "disconnected">("disconnected");
-  const [activeTab, setActiveTab] = useState<"notifications" | "activity">("notifications");
-  const [markingId, setMarkingId] = useState<number | null>(null);
-  const [filter, setFilter] = useState<"all" | "unread">("all");
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [notificationsData, activityData] = await Promise.all([getNotifications(), getActivityLogs()]);
-      setNotifications(notificationsData);
-      setActivityLogs(activityData);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
-    getMe().then(setUser).catch(() => setUser(null));
-  }, []);
+    getMe()
+      .then(setUser)
+      .catch(() => setUser(null));
 
-  useEffect(() => {
-    if (!user) return;
-    const initialLoad = window.setTimeout(() => {
-      void loadData();
-    }, 0);
-    const interval = window.setInterval(() => {
-      void loadData();
-    }, POLL_INTERVAL_MS);
+    // Fetch notifications & activity logs
+    Promise.all([fetchNotificationsList(), getActivityLogs()])
+      .then(([_, logs]) => {
+        setActivityLogs(logs);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [fetchNotificationsList]);
 
-    return () => {
-      window.clearTimeout(initialLoad);
-      window.clearInterval(interval);
-    };
-  }, [loadData, user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    let socket: WebSocket | null = null;
-    let reconnectTimer: number | null = null;
-    let cancelled = false;
-
-    const connect = () => {
-      setSocketStatus("connecting");
-      socket = new WebSocket(`${WS_BASE}/ws/notifications`);
-
-      socket.onopen = () => {
-        if (cancelled) return;
-        setSocketStatus("connected");
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data) as NotificationItem | { type?: string };
-          if ("type" in payload && payload.type === "connected") return;
-
-          const notification = payload as NotificationItem;
-          setNotifications((current) => {
-            const next = current.filter((item) => item.id !== notification.id);
-            return [notification, ...next];
-          });
-        } catch (error) {
-          console.error(error);
-        }
-      };
-
-      socket.onerror = () => {
-        socket?.close();
-      };
-
-      socket.onclose = () => {
-        if (cancelled) return;
-        setSocketStatus("disconnected");
-        reconnectTimer = window.setTimeout(connect, 5000);
-      };
-    };
-
-    connect();
-
-    return () => {
-      cancelled = true;
-      if (reconnectTimer) window.clearTimeout(reconnectTimer);
-      socket?.close();
-    };
-  }, [user]);
-
+  // Filter notifications by tab selection
   const filteredNotifications = useMemo(() => {
-    if (filter === "unread") {
-      return notifications.filter((notification) => !notification.is_read);
-    }
-    return notifications;
-  }, [filter, notifications]);
-
-  const unreadCount = useMemo(
-    () => notifications.filter((notification) => !notification.is_read).length,
-    [notifications],
-  );
-
-  async function handleMarkRead(id: number) {
-    setMarkingId(id);
-    try {
-      const updated = await markNotificationRead(id);
-      setNotifications((current) => current.map((notification) => (notification.id === updated.id ? updated : notification)));
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setMarkingId(null);
-    }
-  }
+    return notifications.filter((notif) => {
+      const type = notif.type.toLowerCase();
+      if (activeTab === "all") return true;
+      if (activeTab === "alerts") {
+        return (
+          type.includes("overdue") ||
+          type.includes("discrepancy") ||
+          type.includes("missing") ||
+          type.includes("damaged") ||
+          type.includes("alert")
+        );
+      }
+      if (activeTab === "approvals") {
+        return (
+          type.includes("approve") ||
+          type.includes("reject") ||
+          type.includes("transfer") ||
+          type.includes("assign")
+        );
+      }
+      if (activeTab === "bookings") {
+        return type.includes("booking");
+      }
+      return true;
+    });
+  }, [notifications, activeTab]);
 
   if (!user) return null;
 
@@ -175,125 +79,117 @@ export default function NotificationsPage() {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="border-b border-stone-200/10 px-5 py-5 sm:px-6 lg:px-7">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.28em] text-emerald-300/80">Screen 10</p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-50">Activity logs and notifications</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-400">
-                  Keep every role informed without digging for updates. Notifications refresh every 30 seconds and the audit log shows who did what and when.
-                </p>
-                <p className="mt-2 text-xs text-stone-500">Signed in as {user.name} ({user.role.replace("_", " ")})</p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] xl:w-[560px]">
-                <input
-                  value={filter}
-                  readOnly
-                  className={inputClassName("cursor-default capitalize")}
-                />
-                <div className="flex h-11 items-center justify-center rounded-2xl border border-emerald-300/40 bg-emerald-300/10 px-4 text-sm font-medium text-emerald-100">
-                  {unreadCount} unread · {socketStatus}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-3">
-              {[
-                { id: "notifications", label: "Notifications" },
-                { id: "activity", label: "Activity log" },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id as "notifications" | "activity")}
-                  className={`rounded-full border px-5 py-1.5 text-sm font-medium transition ${activeTab === tab.id ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300" : "border-stone-200/20 text-stone-300 hover:border-stone-200/40 hover:bg-stone-200/5"}`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setFilter(filter === "all" ? "unread" : "all")}
-                className="rounded-full border border-stone-200/20 px-5 py-1.5 text-sm font-medium text-stone-300 transition hover:border-stone-200/40 hover:bg-stone-200/5"
-              >
-                {filter === "all" ? "Show unread only" : "Show all notifications"}
-              </button>
-            </div>
+            <h1 className="text-3xl font-semibold tracking-tight text-stone-50">Notifications &amp; Activity Logs</h1>
+            <p className="mt-1 text-sm text-stone-400">
+              Stay updated on asset assignments, transfer requests, booking approvals, and system activities.
+            </p>
           </header>
 
-          <div className="flex-1 overflow-auto p-5 lg:p-7">
+          <div className="flex-1 overflow-auto p-5 lg:p-7 space-y-6">
+            {/* Tab Pill Buttons */}
+            <div className="flex flex-wrap gap-2.5">
+              {(["all", "alerts", "approvals", "bookings"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-full border px-5 py-1.5 text-xs font-semibold tracking-wide uppercase transition ${
+                    activeTab === tab
+                      ? "border-emerald-400/40 bg-emerald-400/15 text-emerald-300"
+                      : "border-stone-200/15 text-stone-400 hover:bg-stone-200/5 hover:text-stone-300"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
             {loading ? (
               <p className="text-stone-400">Loading notifications...</p>
-            ) : activeTab === "notifications" ? (
-              <section className="rounded-[1.75rem] border border-stone-200/10 bg-stone-950/20 p-5">
-                <div className="overflow-hidden rounded-[1.5rem] border border-stone-200/10 bg-[#171b17]">
-                  <div className="grid grid-cols-[1fr_1.2fr_0.7fr_0.5fr] gap-4 border-b border-stone-200/10 px-5 py-4 text-sm text-stone-300">
-                    <span>Type</span>
-                    <span>Message</span>
-                    <span>Time</span>
-                    <span>Status</span>
-                  </div>
-
-                  <div className="divide-y divide-stone-200/10">
-                    {filteredNotifications.length > 0 ? (
-                      filteredNotifications.map((notification) => (
-                        <div key={notification.id} className={`grid grid-cols-[1fr_1.2fr_0.7fr_0.5fr] gap-4 px-5 py-4 text-sm ${notification.is_read ? "bg-transparent" : "bg-emerald-300/5"}`}>
-                          <div>
-                            <p className="font-medium text-stone-100">{typeLabel(notification.type)}</p>
-                            <p className="mt-1 text-xs text-stone-500">{notification.title}</p>
-                          </div>
-                          <p className="text-stone-300">{formatNotificationMessage(notification)}</p>
-                          <time className="text-xs text-stone-500">{new Date(notification.created_at).toLocaleString()}</time>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className={`rounded-full border px-3 py-1 text-xs font-medium ${notification.is_read ? "border-stone-500/40 text-stone-400" : "border-emerald-400/40 text-emerald-300"}`}>
-                              {notification.is_read ? "Read" : "New"}
-                            </span>
-                            {!notification.is_read ? (
-                              <button
-                                type="button"
-                                disabled={markingId === notification.id}
-                                onClick={() => void handleMarkRead(notification.id)}
-                                className="rounded-full border border-stone-200/15 bg-stone-950/35 px-3 py-1 text-xs font-medium text-stone-200 transition hover:bg-stone-200/10 disabled:opacity-60"
-                              >
-                                {markingId === notification.id ? "Saving..." : "Mark read"}
-                              </button>
-                            ) : null}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-5 py-8 text-sm text-stone-400">No notifications found.</div>
-                    )}
-                  </div>
-                </div>
-              </section>
             ) : (
-              <section className="rounded-[1.75rem] border border-stone-200/10 bg-stone-950/20 p-5">
-                <div className="overflow-hidden rounded-[1.5rem] border border-stone-200/10 bg-[#171b17]">
-                  <div className="grid grid-cols-[1.1fr_1.4fr_0.8fr] gap-4 border-b border-stone-200/10 px-5 py-4 text-sm text-stone-300">
-                    <span>Actor</span>
-                    <span>Action</span>
-                    <span>Time</span>
-                  </div>
-
+              <div className="space-y-6">
+                {/* Notifications List */}
+                <div className="rounded-[1.5rem] border border-stone-200/10 bg-[#171b17] overflow-hidden">
                   <div className="divide-y divide-stone-200/10">
-                    {activityLogs.length > 0 ? (
-                      activityLogs.map((log) => (
-                        <div key={log.id} className="grid grid-cols-[1.1fr_1.4fr_0.8fr] gap-4 px-5 py-4 text-sm">
-                          <div>
-                            <p className="font-medium text-stone-100">{log.employee_name}</p>
-                            <p className="mt-1 text-xs text-stone-500">{log.employee_id ? `User #${log.employee_id}` : "System action"}</p>
-                          </div>
-                          <p className="text-stone-300">{formatActivityLog(log)}</p>
-                          <time className="text-xs text-stone-500">{new Date(log.created_at).toLocaleString()}</time>
-                        </div>
-                      ))
+                    {filteredNotifications.length === 0 ? (
+                      <div className="px-5 py-8 text-sm text-stone-500">No notifications in this category.</div>
                     ) : (
-                      <div className="px-5 py-8 text-sm text-stone-400">No activity logs found.</div>
+                      filteredNotifications.map((notif) => {
+                        const isAlert =
+                          notif.type.includes("overdue") ||
+                          notif.type.includes("discrepancy") ||
+                          notif.type.includes("missing") ||
+                          notif.type.includes("damaged");
+                        const isApproval = notif.type.includes("approved") || notif.type.includes("rejected");
+
+                        return (
+                          <div
+                            key={notif.id}
+                            onClick={() => {
+                              if (!notif.is_read) {
+                                void markAsRead(notif.id);
+                              }
+                            }}
+                            className={`group flex items-center justify-between gap-4 px-5 py-4 cursor-pointer hover:bg-stone-200/5 transition ${
+                              !notif.is_read ? "bg-stone-200/5" : ""
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              {/* Indicator Icon/Dot */}
+                              <span
+                                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                  !notif.is_read
+                                    ? "bg-sky-400 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.6)]"
+                                    : isAlert
+                                    ? "bg-rose-500/50"
+                                    : isApproval
+                                    ? "bg-emerald-500/50"
+                                    : "bg-stone-700"
+                                }`}
+                              />
+                              <div className="min-w-0">
+                                <p className={`text-sm leading-snug ${!notif.is_read ? "text-stone-100 font-medium" : "text-stone-300"}`}>
+                                  {notif.message}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="shrink-0 text-xs text-stone-500 font-medium group-hover:text-stone-400 transition">
+                              {timeAgo(notif.created_at)}
+                            </span>
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>
-              </section>
+
+                {/* Audit Activity Logs Table */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-stone-50">Audit log</h3>
+                  <div className="rounded-[1.5rem] border border-stone-200/10 bg-[#171b17]/60 overflow-hidden">
+                    <div className="grid grid-cols-[1fr_2fr_1.2fr] gap-4 border-b border-stone-200/10 px-5 py-3 text-xs font-bold uppercase tracking-wider text-stone-400">
+                      <span>Action</span>
+                      <span>Details</span>
+                      <span>Timestamp</span>
+                    </div>
+                    <div className="divide-y divide-stone-200/10 max-h-[350px] overflow-y-auto">
+                      {activityLogs.length === 0 ? (
+                        <div className="px-5 py-6 text-sm text-stone-500">No activity logs recorded.</div>
+                      ) : (
+                        activityLogs.map((log) => (
+                          <div key={log.id} className="grid grid-cols-[1fr_2fr_1.2fr] items-center gap-4 px-5 py-3.5 text-xs text-stone-300">
+                            <span className="font-mono text-emerald-400/90 font-semibold uppercase">{log.action.replace(/_/g, " ")}</span>
+                            <span className="truncate">
+                              {log.employee_name && <span className="text-stone-100 font-semibold">{log.employee_name}: </span>}
+                              {JSON.stringify(log.details)}
+                            </span>
+                            <span className="text-stone-500">{new Date(log.created_at).toLocaleString()}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>

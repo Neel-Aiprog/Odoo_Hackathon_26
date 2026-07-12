@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { logout, getMe, type User } from "@/lib/api";
+import { useNotifications } from "@/lib/NotificationContext";
 
 export function Sidebar({ currentItem }: { currentItem: string }) {
   const [user, setUser] = useState<User | null>(null);
+  const { unreadCount } = useNotifications();
 
   useEffect(() => {
     getMe()
@@ -21,7 +23,7 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
     { name: "Resource Booking", href: "/bookings" },
     { name: "Maintenance", href: "/maintenance" },
     { name: "Audit", href: "/audit" },
-    { name: "Reports", href: "#" },
+    { name: "Reports", href: "/reports" },
     { name: "Notifications", href: "/notifications" },
   ];
 
@@ -45,15 +47,24 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
         </p>
       </div>
       <nav className="mt-10 space-y-2 text-[15px] text-stone-300">
-        {items.map((item) => (
-          <Link
-            key={item.name}
-            href={item.href}
-            className={`block rounded-xl px-4 py-2.5 ${item.name === currentItem ? "border border-emerald-400/45 bg-emerald-400/10 text-stone-50" : "text-stone-300/90 transition hover:bg-stone-100/5"}`}
-          >
-            {item.name}
-          </Link>
-        ))}
+        {items.map((item) => {
+          const isCurrent = item.name === currentItem;
+          const showBadge = item.name === "Notifications" && unreadCount > 0;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={`flex items-center justify-between rounded-xl px-4 py-2.5 ${isCurrent ? "border border-emerald-400/45 bg-emerald-400/10 text-stone-50" : "text-stone-300/90 transition hover:bg-stone-100/5"}`}
+            >
+              <span>{item.name}</span>
+              {showBadge && (
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-sm animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
       {user && (

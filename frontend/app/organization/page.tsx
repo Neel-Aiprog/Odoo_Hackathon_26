@@ -119,7 +119,13 @@ export default function OrganizationPage() {
     }
   }
 
-  if (authLoading) {
+  useEffect(() => {
+    if (!authLoading && !user) {
+      window.location.href = "/";
+    }
+  }, [authLoading, user]);
+
+  if (authLoading || !user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#111412] text-stone-300">
         Loading...
@@ -127,12 +133,6 @@ export default function OrganizationPage() {
     );
   }
 
-  if (!user) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/";
-    }
-    return null;
-  }
 
   if (user.role !== "admin") {
     return (

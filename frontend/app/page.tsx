@@ -61,6 +61,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!user) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDashboardData();
   }, [user, loadDashboardData]);
 
