@@ -1,31 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --bg-app: #0f1115;
-  --bg-surface: #16191f;
-  --bg-elevated: #1c1f27;
-  --bg-input: #11141a;
+  /* Dark app background and dark sidebar */
+  --bg-app: #000000;
+  --bg-surface: #0a0a0c;
+  --bg-elevated: #121215;
+  --bg-input: #3d4df2;
 
-  --primary: #4682b4;
-  --primary-light: #5c9fd0;
-  --primary-dark: #365f82;
+  --primary: #3d4df2;
+  --primary-light: #f46cc3;
+  --primary-dark: #202eb8;
   --primary-inverse: #ffffff;
 
-  --warning: #c2593a;
-  --warning-light: #d97a5e;
-  --success: #3a8c5d;
+  --warning: #ff4d4d;
+  --warning-light: #ff7373;
+  --success: #d4f03b;
 
-  --border: #2a2f3a;
-  --border-subtle: #1e222b;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.04);
 
-  --text-primary: #f5f4f0;
-  --text-secondary: #a1a7b3;
-  --text-muted: #6e7681;
-  --text-placeholder: #4e5561;
+  --text-primary: #f8f9fa;
+  --text-secondary: #a0a2ad;
+  --text-muted: #72747f;
+  --text-placeholder: rgba(255, 255, 255, 0.6);
 
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
+  --radius-sm: 0.75rem;
+  --radius-md: 1.25rem;
+  --radius-lg: 2rem;
 }
 
 @theme inline {
@@ -68,6 +69,214 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Sidebar Custom Styling */
+aside,
+.w-64.bg-\[\#111412\] {
+  background-color: var(--bg-surface) !important;
+  border-right: 1px solid var(--border) !important;
+}
+
+/* Navigation Link Active State Outline Style from reference */
+aside nav a[class*="bg-primary/10"],
+aside nav a[class*="text-primary-light"] {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  border: 1.5px solid var(--primary) !important;
+  border-radius: 0.75rem !important;
+}
+
+/* Override layout background colors to make sure everything is dark charcoal/black */
+.bg-\[\#0f1110\],
+.bg-\[\#111412\],
+main[class*="bg-bg-app"] {
+  background-color: #000000 !important;
+}
+
+/* Override Main Cards to match the warm pale beige/cream widgets in reference */
+.bg-\[\#141714\],
+.bg-\[\#161916\],
+.bg-\[\#171b17\],
+.bg-\[\#171b17\]\/50,
+.bg-\[\#171b17\]\/60,
+.bg-stone-950\/20,
+.bg-stone-950\/35,
+div[class*="bg-bg-surface"]:not(aside):not(header) {
+  background-color: #f7f4db !important;
+  color: #101114 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 2rem !important;
+}
+
+/* Make text inside the pale beige cards dark charcoal, except for buttons, inputs, links, select options, and badges */
+.bg-\[\#141714\] *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+.bg-\[\#161916\] *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+.bg-\[\#171b17\] *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+.bg-\[\#171b17\]\/50 *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+.bg-\[\#171b17\]\/60 *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+.bg-stone-950\/20 *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+.bg-stone-950\/35 *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+div[class*="bg-bg-surface"]:not(aside):not(header) *:not(button):not(input):not(select):not(textarea):not(a):not(span) {
+  color: #101114 !important;
+}
+
+/* Force white text on buttons, link components, and any clickable elements styled with primary/blue backgrounds */
+button, 
+input[type="submit"],
+input[type="button"],
+a[class*="bg-primary"],
+a[class*="bg-emerald-300"],
+button[class*="bg-primary"],
+button[class*="bg-emerald-300"],
+.cursor-pointer[class*="bg-primary"],
+.cursor-pointer[class*="bg-emerald-300"],
+[class*="bg-bg-input"],
+[class*="bg-primary"],
+[class*="bg-emerald-300"] {
+  color: #ffffff !important;
+}
+
+/* Ensure child elements like icons or labels inside these blue clickable components also render white text */
+button *, 
+a[class*="bg-primary"] *,
+a[class*="bg-emerald-300"] *,
+button[class*="bg-primary"] *,
+button[class*="bg-emerald-300"] *,
+.cursor-pointer[class*="bg-primary"] *,
+.cursor-pointer[class*="bg-emerald-300"] *,
+[class*="bg-bg-input"] *,
+[class*="bg-primary"] *,
+[class*="bg-emerald-300"] * {
+  color: #ffffff !important;
+}
+
+/* Table heading backgrounds inside pale cards */
+.divide-stone-200\/5 > *,
+[class*="bg-stone-950/20"] {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Ensure table rows borders inside pale cards match layout */
+.divide-stone-200\/5 > * {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+.divide-stone-200\/5 *:hover {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Custom Input Field Styling matching the electric blue forms in reference */
+div[class*="bg-bg-surface"]:not(aside):not(header) input,
+div[class*="bg-bg-surface"]:not(aside):not(header) select,
+div[class*="bg-bg-surface"]:not(aside):not(header) textarea,
+div[class*="bg-bg-surface"]:not(aside):not(header) input[type="text"],
+div[class*="bg-bg-surface"]:not(aside):not(header) input[type="email"],
+div[class*="bg-bg-surface"]:not(aside):not(header) input[type="password"],
+.bg-\[\#171b17\] input,
+.bg-\[\#171b17\] select,
+.bg-\[\#171b17\] textarea,
+.bg-\[\#161916\] input,
+.bg-\[\#161916\] select,
+.bg-\[\#161916\] textarea {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 1rem !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+div[class*="bg-bg-surface"]:not(aside):not(header) input::placeholder,
+.bg-\[\#171b17\] input::placeholder,
+.bg-\[\#161916\] input::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+div[class*="bg-bg-surface"]:not(aside):not(header) input *, 
+div[class*="bg-bg-surface"]:not(aside):not(header) select *,
+.bg-\[\#171b17\] select *,
+.bg-\[\#161916\] select * {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+/* Form field label text style above inputs */
+div[class*="bg-bg-surface"]:not(aside):not(header) label span,
+div[class*="bg-bg-surface"]:not(aside):not(header) .font-semibold,
+div[class*="bg-bg-surface"]:not(aside):not(header) [class*="text-stone-300"],
+div[class*="bg-bg-surface"]:not(aside):not(header) [class*="text-text-secondary"],
+.bg-\[\#171b17\] label span,
+.bg-\[\#171b17\] .font-semibold,
+.bg-\[\#171b17\] [class*="text-stone-300"],
+.bg-\[\#171b17\] [class*="text-text-secondary"],
+.bg-\[\#161916\] label span,
+.bg-\[\#161916\] .font-semibold,
+.bg-\[\#161916\] [class*="text-stone-300"],
+.bg-\[\#161916\] [class*="text-text-secondary"] {
+  color: #101114 !important;
+  font-weight: 700 !important;
+}
+
+/* Override primary action buttons to follow electric blue themes */
+button[type="submit"],
+.bg-emerald-300,
+button[class*="bg-primary"],
+a[class*="bg-primary"],
+a[class*="bg-emerald-300"] {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  border-radius: 1.25rem !important;
+  font-weight: 700 !important;
+  border: none !important;
+  transition: all 0.2s ease-in-out !important;
+}
+button[type="submit"]:hover,
+.bg-emerald-300:hover,
+button[class*="bg-primary"]:hover,
+a[class*="bg-primary"]:hover,
+a[class*="bg-emerald-300"]:hover {
+  background-color: #2b39cc !important;
+  transform: translateY(-1px);
+}
+
+/* Secondary Button overrides (Change Password, Cancel, outline views) */
+button[class*="border-stone-200/10"],
+button[class*="bg-stone-200/5"],
+a[class*="border-stone-200/10"],
+button[class*="border-border"],
+button[class*="bg-bg-elevated"] {
+  background-color: transparent !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+button[class*="border-stone-200/10"]:hover,
+button[class*="bg-stone-200/5"]:hover,
+button[class*="border-border"]:hover,
+button[class*="bg-bg-elevated"]:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Badges and tags styled with volt lime accents */
+span[class*="bg-emerald-300/10"],
+span[class*="text-emerald-100"],
+span[class*="bg-warning/10"],
+span[class*="text-warning-light"] {
+  background-color: var(--success) !important;
+  color: #101114 !important;
+  border: 1px solid var(--success) !important;
+  font-weight: 700 !important;
+}
+
+/* Verification and status tags inside cards */
+.bg-emerald-400\/10 {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  border-color: var(--primary) !important;
+}
+
+/* Toast alert overlay style */
+.fixed.bottom-4.right-4 * {
+  background-color: var(--bg-surface) !important;
+  color: #ffffff !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -77,16 +286,16 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--color-border);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: var(--color-text-muted);
 }
 
 /* Focus visible ring for raw elements */
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -110,4 +319,27 @@ input[type="checkbox"],
 input[type="radio"],
 .cursor-pointer {
   cursor: pointer;
+}
+
+/* Ensure that any element with a white background has dark, highly visible text (except for buttons, inputs, links, select options, and badges) */
+.bg-white,
+[class*="bg-white"],
+[style*="background-color: rgb(255, 255, 255)"],
+[style*="background: rgb(255, 255, 255)"],
+[style*="background-color: white"],
+[style*="background: white"],
+[style*="background-color: #ffffff"],
+[style*="background: #ffffff"] {
+  color: #101114 !important;
+}
+
+.bg-white *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+[class*="bg-white"] *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+[style*="background-color: rgb(255, 255, 255)"] *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+[style*="background: rgb(255, 255, 255)"] *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+[style*="background-color: white"] *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+[style*="background: white"] *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+[style*="background-color: #ffffff"] *:not(button):not(input):not(select):not(textarea):not(a):not(span),
+[style*="background: #ffffff"] *:not(button):not(input):not(select):not(textarea):not(a):not(span) {
+  color: #101114 !important;
 }

@@ -212,8 +212,8 @@ export default function MaintenancePage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-bg-app px-4 py-6">
         <Card className="w-full max-w-md">
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary-light">
-            AssetFlow
+          <p className="font-heading text-3xl font-extrabold tracking-tighter text-[#f46cc3] lowercase mb-2">
+            assetflow
           </p>
           <h1 className="font-heading mt-2 text-2xl font-semibold text-text-primary">
             Sign in to continue

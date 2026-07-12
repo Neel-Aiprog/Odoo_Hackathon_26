@@ -111,8 +111,8 @@ export function Sidebar({ currentItem }: { currentItem: string }) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-bg-surface lg:flex">
       <div className="px-5 py-6">
-        <p className="font-heading text-2xl font-bold tracking-tight text-text-primary">
-          AssetFlow
+        <p className="font-heading text-3xl font-extrabold tracking-tighter text-[#f46cc3] lowercase">
+          assetflow
         </p>
         <p className="mt-1.5 text-xs leading-relaxed text-text-muted">
           Enterprise asset &amp; resource management

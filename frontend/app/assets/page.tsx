@@ -246,7 +246,7 @@ export default function AssetsPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(48,82,62,0.35),_transparent_34%),linear-gradient(180deg,_#0f1110_0%,_#111412_100%)] px-4 py-6 text-stone-100">
         <section className="w-full max-w-md rounded-[2rem] border border-stone-200/15 bg-[#141714] p-8 shadow-[0_28px_90px_rgba(0,0,0,0.45)]">
-          <p className="text-sm uppercase tracking-[0.28em] text-emerald-300/80">AssetFlow</p>
+          <p className="font-heading text-3xl font-extrabold tracking-tighter text-[#f46cc3] lowercase mb-2">assetflow</p>
           <h1 className="mt-2 text-3xl font-semibold text-stone-50">Sign in to continue</h1>
           <p className="mt-2 text-sm text-stone-400">
             Use <span className="text-stone-200">mark@assetflow.com</span> /{" "}
