@@ -36,7 +36,7 @@ class TestAssetFlowAPI(unittest.TestCase):
             name="Mark Manager",
             email="mark@assetflow.com",
             password_hash="mock_hash",
-            role="asset_manager",
+            role="admin",
             status="active"
         )
         self.test_emp = Employee(
@@ -63,7 +63,19 @@ class TestAssetFlowAPI(unittest.TestCase):
         self.category_id = self.test_category.id
         db.close()
 
+        # Override get_current_user to return our seeded manager (with admin role)
+        from deps import get_current_user
+        def mock_get_current_user():
+            db = SessionLocal()
+            mgr = db.get(Employee, self.manager_id)
+            db.expunge(mgr)
+            db.close()
+            return mgr
+        app.dependency_overrides[get_current_user] = mock_get_current_user
+
     def tearDown(self):
+        from deps import get_current_user
+        app.dependency_overrides.pop(get_current_user, None)
         engine.dispose()
 
     # =====================================================================
@@ -470,13 +482,14 @@ class TestAssetFlowAPI(unittest.TestCase):
         asset_id = asset.id
         db.close()
 
-        self.client.post("/api/allocations", json={
+        resp = self.client.post("/api/allocations", json={
             "asset_id": asset_id, "allocated_to_type": "employee",
-            "allocated_employee_id": self.emp_id, "allocated_by_id": self.manager_id
+            "allocated_employee_id": self.manager_id, "allocated_by_id": self.manager_id
         })
 
-        # 2. Query notifications for emp_id
-        notif_resp = self.client.get(f"/api/notifications?employee_id={self.emp_id}")
+
+        # 2. Query notifications for current user (manager)
+        notif_resp = self.client.get("/api/notifications")
         self.assertEqual(notif_resp.status_code, 200)
         self.assertGreater(len(notif_resp.json()), 0)
         notif_id = notif_resp.json()[0]["id"]
