@@ -11,7 +11,6 @@ import {
   getCategories,
   getMe,
   login,
-  getAssetQrUrl,
   type Asset,
   type AssetDetail,
   type Category,
@@ -101,83 +100,6 @@ export default function AssetsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const canRegister = user?.role === "admin" || user?.role === "asset_manager";
-
-  function handlePrintLabel(asset: AssetDetail) {
-    const printWindow = window.open("", "_blank", "width=600,height=600");
-    if (!printWindow) {
-      alert("Please allow popups to print asset labels.");
-      return;
-    }
-    const qrUrl = getAssetQrUrl(asset.id);
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Print Label - ${asset.asset_tag}</title>
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-              margin: 0;
-              padding: 20px;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              height: 100vh;
-              text-align: center;
-            }
-            .label-card {
-              border: 2px dashed #000;
-              padding: 20px;
-              border-radius: 12px;
-              max-width: 280px;
-              background: #fff;
-            }
-            .title {
-              font-size: 20px;
-              font-weight: bold;
-              margin-bottom: 5px;
-            }
-            .tag {
-              font-size: 16px;
-              color: #4b5563;
-              margin-bottom: 15px;
-              font-family: monospace;
-              font-weight: bold;
-            }
-            .qr-img {
-              width: 180px;
-              height: 180px;
-              object-fit: contain;
-            }
-            .footer {
-              font-size: 10px;
-              color: #9ca3af;
-              margin-top: 15px;
-            }
-            @media print {
-              body { padding: 0; }
-              .label-card { border: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="label-card">
-            <div class="title">${asset.name}</div>
-            <div class="tag">${asset.asset_tag}</div>
-            <img class="qr-img" src="${qrUrl}" alt="QR" />
-            <div class="footer">Property of AssetFlow Registry</div>
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            };
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  }
 
   const loadAssets = useCallback(async () => {
     setLoadingAssets(true);
@@ -384,8 +306,8 @@ export default function AssetsPage() {
       title="Asset registrations and directory"
       subtitle="Register assets with auto-generated tags, search by tag or serial number, and track lifecycle status with allocation and maintenance history."
       actions={
-        <Button onClick={() => document.getElementById("register-form")?.scrollIntoView({ behavior: "smooth" })}>
-          Register Asset
+        <Button asChild>
+          <a href="#register-form">Register Asset</a>
         </Button>
       }
     >
@@ -540,29 +462,6 @@ export default function AssetsPage() {
                     value={selectedAsset.acquisition_date}
                   />
                 </div>
-
-                <div className="mt-6 pt-5 border-t border-border-subtle flex flex-col sm:flex-row items-center gap-5">
-                  <div className="bg-white p-2.5 rounded-2xl w-24 h-24 flex items-center justify-center shrink-0 border border-border-subtle">
-                    <img
-                      src={getAssetQrUrl(selectedAsset.id)}
-                      alt="Asset QR Code"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div className="text-center sm:text-left">
-                    <h4 className="text-sm font-semibold text-text-primary">Asset QR Label</h4>
-                    <p className="text-xs text-text-secondary mt-1 max-w-xs">
-                      Scan this code during physical audits or quick check-ins.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => handlePrintLabel(selectedAsset)}
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 px-3.5 py-1.5 text-xs font-semibold text-primary-light transition"
-                    >
-                      Print Label
-                    </button>
-                  </div>
-                </div>
               </Card>
 
               <Card>
@@ -639,8 +538,7 @@ export default function AssetsPage() {
         </div>
 
         <aside className="space-y-5">
-          <div id="register-form">
-            <Card>
+          <Card id="register-form">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-text-muted">
@@ -788,8 +686,7 @@ export default function AssetsPage() {
                 </Button>
               </form>
             )}
-            </Card>
-          </div>
+          </Card>
 
           <Card>
             <h3 className="font-heading text-lg font-semibold text-text-primary">

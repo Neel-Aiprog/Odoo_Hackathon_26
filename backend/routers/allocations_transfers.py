@@ -221,16 +221,6 @@ def create_transfer_request(
             f"{current_user.name} has requested a transfer of asset {asset.name} ({asset.asset_tag}) currently held by you.",
         )
 
-    # Notify managers (admin & asset_manager) for approval dashboard alerting
-    managers = db.query(Employee).filter(Employee.role.in_(["admin", "asset_manager"])).all()
-    for mgr in managers:
-        if mgr.id != current_user.id:
-            create_notification(
-                db, mgr.id, "transfer_requested_mgr",
-                "New Transfer Pending Approval",
-                f"{current_user.name} has requested to transfer asset {asset.name} ({asset.asset_tag}). Manager approval required.",
-            )
-
     t_emp_name = db.get(Employee, new_transfer.target_employee_id).name if new_transfer.target_employee_id else None
     t_dept_name = db.get(Department, new_transfer.target_department_id).name if new_transfer.target_department_id else None
     h_emp_name = db.get(Employee, new_transfer.current_holder_employee_id).name if new_transfer.current_holder_employee_id else None
